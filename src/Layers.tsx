@@ -275,42 +275,7 @@ export function LayerSelector() {
           ))}
         </div>
       </div>
-      <div className="search-container">
-        <MagnifyingGlassIcon className="search-icon" />
-        <input
-          type="text"
-          placeholder="Zoek lagen..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          onKeyDown={handleSearchKeyPress}
-          className="search-input"
-        />
-        {searchTerm && (
-          <button
-            className="search-clear-button"
-            onClick={() => setSearchTerm("")}
-            title="Zoekopdracht wissen"
-          >
-            <Cross1Icon />
-          </button>
-        )}
-      </div>
-      <div className="layers-checkboxes">
-        {isLoading ? (
-          <div className="loading-message">Loading services...</div>
-        ) : (
-          filteredLayerGroups.map(group => (
-            <LayerGroup
-              key={group.serviceId}
-              title={group.title}
-              layers={group.layers}
-              isExpanded={!!searchTerm}
-              setSearchTerm={setSearchTerm}
-            />
-          ))
-        )}
-      </div>
-      <div className="add-service-container">
+       <div className="add-service-container">
         <div className="service-header">
           <h4>Voeg service toe</h4>
           <div className="service-info-tooltip">
@@ -348,6 +313,42 @@ export function LayerSelector() {
         {serviceError && <div className="service-error">{serviceError}</div>}
         {serviceSuccess && <div className="service-success">{serviceSuccess}</div>}
       </div>
+      <div className="search-container">
+        <MagnifyingGlassIcon className="search-icon" />
+        <input
+          type="text"
+          placeholder="Zoek lagen..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyDown={handleSearchKeyPress}
+          className="search-input"
+        />
+        {searchTerm && (
+          <button
+            className="search-clear-button"
+            onClick={() => setSearchTerm("")}
+            title="Zoekopdracht wissen"
+          >
+            <Cross1Icon />
+          </button>
+        )}
+      </div>
+      <div className="layers-checkboxes">
+        {isLoading ? (
+          <div className="loading-message">Loading services...</div>
+        ) : (
+          filteredLayerGroups.map(group => (
+            <LayerGroup
+              key={group.serviceId}
+              title={group.title}
+              layers={group.layers}
+              isExpanded={!!searchTerm}
+              setSearchTerm={setSearchTerm}
+            />
+          ))
+        )}
+      </div>
+
     </div>
   );
 }

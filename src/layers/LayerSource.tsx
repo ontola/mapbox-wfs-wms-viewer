@@ -25,7 +25,7 @@ export function LayerSource({ layer, bounds = boundsNL }: LayerSourceProps) {
         scheme="xyz"
       >
         {mapBoxLayers.map(mapBoxLayer => (
-          <Layer {...mapBoxLayer} key={mapBoxLayer.id} beforeId={bagLayerId} />
+          <Layer {...mapBoxLayer} key={mapBoxLayer.id} />
         ))}
       </Source>
     );
