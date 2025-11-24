@@ -46,10 +46,6 @@ export function makeMapBoxLayer(layer: LayerI): AnyLayer[] {
 
         const matchExpression: any[] = ["match", getExpression];
 
-        console.log(`[LayerStyles] Generating style for ${layer.id}`);
-        console.log(`[LayerStyles] Field: ${field}`);
-        console.log(`[LayerStyles] Variations:`, fieldVariations);
-        console.log(`[LayerStyles] UniqueValues:`, uniqueValueInfos.length);
 
         uniqueValueInfos.forEach(info => {
           if (info.symbol && info.symbol.color) {
@@ -83,7 +79,7 @@ export function makeMapBoxLayer(layer: LayerI): AnyLayer[] {
         filter: ["in", ["geometry-type"], ["literal", ["Polygon", "MultiPolygon"]]],
         paint: {
           "fill-color": fillColor,
-          "fill-opacity": 0.7, // Increased opacity to make colors more visible
+          "fill-opacity": 0.7,
         },
       },
       {

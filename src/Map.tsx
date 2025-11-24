@@ -18,7 +18,6 @@ import MapGL, {
 import { LngLatBounds } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { AppContext } from "./App";
-import { GBPObject, getObjectType } from "./schema";
 import { mapboxToken } from "./config";
 import { ToolTip } from "./Tooltip";
 import { Dialog } from "./Dialog";
@@ -27,8 +26,6 @@ import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import * as turf from "@turf/turf";
 import { boundsLngLatToIS, boundsLngLatToMatrix } from "./bounds";
 import { LayerSource } from "./layers/LayerSource";
-import { bagLayerId } from "./layers/LayerTypes";
-import { bagLayer } from "./layers/LayerStyles";
 import { boundsUtrecht } from "./layers/constants";
 import { getMapViewFromUrl, setMapViewInUrl } from "./urlState";
 
@@ -109,7 +106,7 @@ export function Map() {
       .filter(layer => layer.visible)
       .flatMap(layer =>
         layer.type === 'vector'
-          ? [layer.id, `${layer.id}-symbol`]
+          ? [layer.id, `${layer.id}-symbol`, `${layer.id}-circle`] // Include circle layers for point features
           : [layer.id]
       );
 

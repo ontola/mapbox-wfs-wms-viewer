@@ -21,6 +21,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  cursor: help;
+  /* Show help cursor to indicate tooltip */
 }
 
 .legend-swatch {
@@ -28,12 +30,18 @@
   height: 16px;
   border-radius: 2px;
   flex-shrink: 0;
+  cursor: help;
+  /* Also show help cursor on the circle */
+  pointer-events: auto;
+  /* Ensure the circle is interactive */
 }
 
 .legend-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: help;
+  /* Show help cursor on label too */
 }
 
 .selected-layer-item-container {
