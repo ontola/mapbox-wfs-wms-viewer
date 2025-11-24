@@ -47,14 +47,21 @@
   gap: 0.5rem;
 }
 
+.selected-layer-item-container {
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  padding: 8px;
+}
+
 .selected-layer-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem;
-  background-color: #f5f5f5;
-  border-radius: 4px;
+  /* padding: 0.5rem; */
+  /* background-color: #f5f5f5; */
+  /* border-radius: 4px; */
   font-size: 14px;
+  font-weight: 500;
 }
 
 .selected-layer-item span {
@@ -160,8 +167,7 @@
 }
 
 /* Layer Group Styles */
-.layer-group {
-}
+.layer-group {}
 
 .layer-group__header {
   display: flex;

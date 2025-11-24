@@ -3,6 +3,7 @@ import { useContext, useEffect, useMemo, useState } from "react";
 
 import { AppContext } from "./App";
 import "./Layers.css";
+import "./components/Legend.css";
 import { BoundsMatrix } from "./bounds";
 import { LayerGroup } from "./layers/LayerGroup";
 import { LayerI } from "./layers/LayerTypes";
@@ -11,6 +12,7 @@ import { services } from "./layers/defaultServices";
 import "./components/CustomCheckbox.css";
 import { detectServiceType } from "./layers/detectService";
 import { useAllServices } from "./layers/useGEOServices";
+import { Legend } from "./components/Legend";
 
 export const bagLayerId = "points";
 
@@ -67,21 +69,39 @@ export function LayerSelector() {
     })).filter(group => group.layers.length > 0);
   }, [layerGroups, searchTerm]);
 
-  // Add service layers to existing layers if not already present
+  // Add service layers to existing layers if not already present, or update them if they have new info
   useEffect(() => {
     if (serviceLayers.length > 0) {
       setLayers(prevLayers => {
-        // Only add layers that don't already exist
-        const newLayers = serviceLayers.filter(
-          serviceLayer => !prevLayers.some(layer =>
+        const updatedLayers = [...prevLayers];
+        let hasChanges = false;
+
+        serviceLayers.forEach(serviceLayer => {
+          const existingLayerIndex = updatedLayers.findIndex(layer =>
             // Check for duplicate by ID and URL
             (layer.id === serviceLayer.id && layer.url === serviceLayer.url) ||
             // Also check for duplicate by ID and service ID
             (layer.id === serviceLayer.id && layer.serviceId === serviceLayer.serviceId)
-          )
-        );
+          );
 
-        return newLayers.length > 0 ? [...prevLayers, ...newLayers] : prevLayers;
+          if (existingLayerIndex === -1) {
+            // New layer
+            updatedLayers.push(serviceLayer);
+            hasChanges = true;
+          } else {
+            // Existing layer - check if we need to update it (e.g. styleInfo added)
+            const existingLayer = updatedLayers[existingLayerIndex];
+            if (serviceLayer.styleInfo && !existingLayer.styleInfo) {
+              updatedLayers[existingLayerIndex] = {
+                ...existingLayer,
+                styleInfo: serviceLayer.styleInfo
+              };
+              hasChanges = true;
+            }
+          }
+        });
+
+        return hasChanges ? updatedLayers : prevLayers;
       });
     }
   }, [serviceLayers, setLayers]);
@@ -214,31 +234,31 @@ export function LayerSelector() {
           <Cross1Icon />
         </button>
       </div>
-
       <div className="selected-layers">
         <h4>Geselecteerde lagen</h4>
         <div className="selected-layers-list">
-          <div className="selected-layer-item">
-            <span>Zoekresultaten</span>
-          </div>
           {selectedLayers.map(layer => (
             <div
               key={layer.uniqueId || `${layer.serviceId || 'noservice'}-${layer.url || 'nourl'}-${layer.id}`}
-              className="selected-layer-item"
+              className="selected-layer-item-container"
             >
-              <span>{layer.name}</span>
-              <button
-                onClick={() => handleRemoveLayer(layer.id, layer.uniqueId, layer.serviceId, layer.url)}
-                title="Verwijder laag"
-                className="remove-layer-button"
-              >
-                <Cross1Icon />
-              </button>
+              <div className="selected-layer-item">
+                <span>{layer.name}</span>
+                <button
+                  onClick={() => handleRemoveLayer(layer.id, layer.uniqueId, layer.serviceId, layer.url)}
+                  title="Verwijder laag"
+                  className="remove-layer-button"
+                >
+                  <Cross1Icon />
+                </button>
+              </div>
+              <Legend layer={layer} />
             </div>
           ))}
         </div>
       </div>
-       <div className="add-service-container">
+
+      <div className="add-service-container">
         <div className="service-header">
           <h4>Voeg service toe</h4>
           <div className="service-info-tooltip">
@@ -276,6 +296,7 @@ export function LayerSelector() {
         {serviceError && <div className="service-error">{serviceError}</div>}
         {serviceSuccess && <div className="service-success">{serviceSuccess}</div>}
       </div>
+
       <div className="search-container">
         <MagnifyingGlassIcon className="search-icon" />
         <input

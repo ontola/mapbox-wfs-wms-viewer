@@ -8,6 +8,34 @@ export interface LayerI {
   serviceId?: string;
   /** Unique identifier for React keys, especially useful for ESRI services with duplicate layer IDs */
   uniqueId?: string;
+  /** Extracted style information from ArcGIS Feature Service */
+  styleInfo?: ArcGISRenderer;
+  /** Layer description from capabilities Abstract */
+  description?: string;
+}
+
+export interface ArcGISRenderer {
+  type: "uniqueValue" | "simple" | "classBreaks";
+  field1?: string;
+  defaultSymbol?: ArcGISSymbol;
+  uniqueValueInfos?: ArcGISUniqueValueInfo[];
+  symbol?: ArcGISSymbol; // For simple renderer
+}
+
+export interface ArcGISSymbol {
+  type: string;
+  style: string;
+  color: number[]; // [r, g, b, a]
+  outline?: {
+    color: number[];
+    width: number;
+  };
+}
+
+export interface ArcGISUniqueValueInfo {
+  value: string;
+  label: string;
+  symbol: ArcGISSymbol;
 }
 
 export const bagLayerId = "points";

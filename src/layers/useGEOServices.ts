@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { LayerI, Service } from "./LayerTypes";
+import { isArcGISWfsUrl, getFeatureServiceUrl, findLayerIdByName, fetchArcGISLayerMetadata } from "./arcgis";
 
 interface ServiceResult {
   layers: LayerI[];
@@ -158,6 +159,7 @@ const processWfsCapabilities = (
       url: service.url,
       textField: service.textField,
       serviceId: service.name,
+      description: node.getElementsByTagName("Abstract")[0]?.textContent || undefined,
     };
   });
 
@@ -238,6 +240,7 @@ const processWmsCapabilities = (
           serviceId: service.name,
           // Store the unique ID as a property for React keys
           uniqueId: uniqueId,
+          description: node.getElementsByTagName("Abstract")[0]?.textContent || undefined,
         } as LayerI);
       } else {
         console.log(
@@ -304,6 +307,7 @@ const processWmsCapabilities = (
                 url: service.url,
                 serviceId: service.name,
                 uniqueId,
+                description: node.querySelector("Abstract")?.textContent || undefined,
               } as LayerI);
             }
           }
@@ -450,6 +454,45 @@ export function useAllServices(
           );
 
           const layers = processWfsCapabilities(xmlDoc, text, service);
+
+          // Check if this is an ArcGIS service and try to fetch style info
+          if (isArcGISWfsUrl(service.url)) {
+            const featureServiceUrl = getFeatureServiceUrl(service.url);
+            console.log(`Detected ArcGIS service, trying FeatureService: ${featureServiceUrl}`);
+
+            // Try to match layers to FeatureService layers
+            // We do this in parallel for all layers in this service
+            const layersWithStyle = await Promise.all(layers.map(async (layer) => {
+              try {
+                // Find the corresponding layer ID in the Feature Service
+                const layerId = await findLayerIdByName(featureServiceUrl, layer.name);
+
+                if (layerId) {
+                  console.log(`Found ArcGIS layer ID ${layerId} for WFS layer ${layer.name}`);
+                  const metadata = await fetchArcGISLayerMetadata(featureServiceUrl, layerId);
+
+                  if (metadata && metadata.drawingInfo && metadata.drawingInfo.renderer) {
+                    console.log(`Found style info for layer ${layer.name}`);
+                    return {
+                      ...layer,
+                      styleInfo: metadata.drawingInfo.renderer
+                    };
+                  }
+                } else {
+                  console.log(`Could not find ArcGIS layer ID for ${layer.name}`);
+                }
+              } catch (styleError) {
+                console.warn(`Failed to fetch style for layer ${layer.name}:`, styleError);
+              }
+              return layer;
+            }));
+
+            return {
+              layers: layersWithStyle,
+              loading: false,
+              error: null,
+            };
+          }
 
           return {
             layers,

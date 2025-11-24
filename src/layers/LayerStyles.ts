@@ -14,6 +14,67 @@ import { bagLayerId } from "./LayerTypes";
  */
 export function makeMapBoxLayer(layer: LayerI): AnyLayer[] {
   if (layer.type === "vector") {
+    // Default style
+    let fillColor: any = stringToColor(layer.id);
+    let strokeColor: any = "#000000";
+
+    // Apply ArcGIS style if available
+    console.log(`[LayerStyles] Checking style for ${layer.id}`, layer.styleInfo);
+
+    if (layer.styleInfo) {
+      if (layer.styleInfo.type === "uniqueValue" && layer.styleInfo.field1) {
+        const field = layer.styleInfo.field1;
+        const uniqueValueInfos = layer.styleInfo.uniqueValueInfos || [];
+
+        // Create a match expression for fill color
+        // ["match", ["get", "field"], "value1", "color1", "value2", "color2", "defaultColor"]
+
+        // Handle potential case mismatches between ArcGIS renderer and WFS properties
+        // e.g. Renderer says "KELDER_STATUS" but WFS returns "Kelder_Status"
+        const fieldVariations = [
+          field,
+          field.toLowerCase(),
+          field.toUpperCase(),
+          // Title case (e.g. Kelder_Status)
+          field.charAt(0).toUpperCase() + field.slice(1).toLowerCase(),
+          // Mixed case with underscore (e.g. KELDER_STATUS -> Kelder_Status)
+          field.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join('_')
+        ];
+
+        // Use coalesce to try different field casing
+        const getExpression = ["coalesce", ...fieldVariations.map(f => ["get", f])];
+
+        const matchExpression: any[] = ["match", getExpression];
+
+        console.log(`[LayerStyles] Generating style for ${layer.id}`);
+        console.log(`[LayerStyles] Field: ${field}`);
+        console.log(`[LayerStyles] Variations:`, fieldVariations);
+        console.log(`[LayerStyles] UniqueValues:`, uniqueValueInfos.length);
+
+        uniqueValueInfos.forEach(info => {
+          if (info.symbol && info.symbol.color) {
+            const c = info.symbol.color;
+            // ArcGIS color is [r, g, b, a] (0-255)
+            const colorString = `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${c[3] / 255})`;
+            matchExpression.push(info.value);
+            matchExpression.push(colorString);
+          }
+        });
+
+        // Default color
+        matchExpression.push(stringToColor(layer.id));
+
+        console.log(`[LayerStyles] Generated Expression:`, JSON.stringify(matchExpression));
+
+        fillColor = matchExpression;
+      } else if (layer.styleInfo.type === "simple" && layer.styleInfo.symbol) {
+        const c = layer.styleInfo.symbol.color;
+        if (c) {
+          fillColor = `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${c[3] / 255})`;
+        }
+      }
+    }
+
     return [
       {
         id: layer.id,
@@ -21,8 +82,8 @@ export function makeMapBoxLayer(layer: LayerI): AnyLayer[] {
         type: "fill",
         filter: ["in", ["geometry-type"], ["literal", ["Polygon", "MultiPolygon"]]],
         paint: {
-          "fill-color": stringToColor(layer.id),
-          "fill-opacity": 0.3,
+          "fill-color": fillColor,
+          "fill-opacity": 0.7, // Increased opacity to make colors more visible
         },
       },
       {
@@ -31,8 +92,8 @@ export function makeMapBoxLayer(layer: LayerI): AnyLayer[] {
         type: "line",
         filter: ["in", ["geometry-type"], ["literal", ["Polygon", "MultiPolygon", "LineString", "MultiLineString"]]],
         paint: {
-          "line-color": "#000000",
-          "line-width": 2,
+          "line-color": strokeColor,
+          "line-width": 1,
         },
       },
       {
@@ -42,8 +103,8 @@ export function makeMapBoxLayer(layer: LayerI): AnyLayer[] {
         filter: ["in", ["geometry-type"], ["literal", ["Point", "MultiPoint"]]],
         paint: {
           "circle-radius": 6,
-          "circle-color": stringToColor(layer.id),
-          "circle-stroke-width": 2,
+          "circle-color": fillColor, // Use the same color logic for points
+          "circle-stroke-width": 1,
           "circle-stroke-color": "#ffffff",
         },
       },

@@ -1,4 +1,4 @@
-import { CheckIcon } from "@radix-ui/react-icons";
+import { CheckIcon, InfoCircledIcon } from "@radix-ui/react-icons";
 import React from "react";
 
 interface CustomCheckboxProps {
@@ -6,11 +6,12 @@ interface CustomCheckboxProps {
   onChange: (checked: boolean) => void;
   label: string;
   count?: number;
+  description?: string;
   className?: string;
   [key: string]: any; // Allow any additional props like data-* attributes
 }
 
-export function CustomCheckbox({ checked, onChange, label, count, className = "", ...rest }: CustomCheckboxProps) {
+export function CustomCheckbox({ checked, onChange, label, count, description, className = "", ...rest }: CustomCheckboxProps) {
   const handleClick = (e: React.MouseEvent) => {
     // Prevent default behavior if the click is not on the input element
     if ((e.target as HTMLElement).tagName.toLowerCase() !== "input") {
@@ -31,6 +32,11 @@ export function CustomCheckbox({ checked, onChange, label, count, className = ""
         {checked && <CheckIcon className="check-icon" />}
       </div>
       <span className="custom-checkbox-label">{label}</span>
+      {description && (
+        <div className="custom-checkbox-info" title={description}>
+          <InfoCircledIcon />
+        </div>
+      )}
       {count !== undefined && <span className="custom-checkbox-count">{count}</span>}
     </div>
   );
