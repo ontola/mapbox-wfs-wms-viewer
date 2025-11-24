@@ -8,7 +8,6 @@ import { LayerGroup } from "./layers/LayerGroup";
 import { LayerI } from "./layers/LayerTypes";
 import { useLayerGroups } from "./layers/useLayerGroups";
 import { wfsServices, wmsServices } from "./layers/defaultServices";
-import { CustomCheckbox } from "./components/CustomCheckbox";
 import "./components/CustomCheckbox.css";
 import { detectServiceType } from "./layers/detectService";
 import { useAllServices } from "./layers/useGEOServices";
@@ -23,8 +22,6 @@ export function LayerSelector() {
     setShowLayerSelector,
     layers,
     setLayers,
-    showBagLayer,
-    setShowBagLayer
   } = useContext(AppContext);
 
   // All useState hooks must be called before any conditional logic
@@ -260,13 +257,6 @@ export function LayerSelector() {
         <div className="selected-layers-list">
           <div className="selected-layer-item">
             <span>Zoekresultaten</span>
-            <button
-              onClick={() => setShowBagLayer(!showBagLayer)}
-              title={showBagLayer ? "Verberg zoekresultaten" : "Toon zoekresultaten"}
-              className={`toggle-layer-button ${showBagLayer ? 'active' : ''}`}
-            >
-              {showBagLayer ? <EyeOpenIcon /> : <EyeClosedIcon />}
-            </button>
           </div>
           {selectedLayers.map(layer => (
             <div

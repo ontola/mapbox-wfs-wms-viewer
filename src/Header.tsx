@@ -1,32 +1,16 @@
 import "./Header.css";
 import React, { useState } from "react";
-import { SearchBox } from "./Searchbox";
 import { InfoPage } from "./InfoPage";
 import { Cross1Icon } from "@radix-ui/react-icons";
-import { useTour } from "@reactour/tour";
-import { useCallback } from "react";
-import { useContext } from "react";
-import { AppContext } from "./App";
 import { ChatBubbleIcon, InfoCircledIcon } from "@radix-ui/react-icons";
 
 export function Header() {
   const [showInfoPage, setShowInfoPage] = useState(false);
-  const { setIsOpen, setCurrentStep } = useTour();
-  const { setShowFilter, setShowResults } = useContext(AppContext);
-
-  const startTour = useCallback(() => {
-    setCurrentStep(0);
-    setIsOpen(true);
-    setShowResults(true);
-    setShowFilter(true);
-    setShowInfoPage(false);
-  }, []);
 
   if (showInfoPage) {
     return (
       <div className="infopage">
         <div className="infopage__buttons">
-          <button onClick={startTour}>Start Tour</button>
           <button title="Sluiten" onClick={() => setShowInfoPage(false)}>
             <Cross1Icon />
           </button>
@@ -59,9 +43,6 @@ export function Header() {
             <InfoCircledIcon />
           </button>
         </div>
-      </div>
-      <div className="search-bar-wrapper">
-        <SearchBox />
       </div>
     </div>
   );

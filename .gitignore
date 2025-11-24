@@ -25,5 +25,3 @@ dist-ssr
 
 # Secret local stuff
 .env
-# meilisearch data
-data.ms
