@@ -14,7 +14,7 @@ export function makeWfsUrl(layer: LayerI, bounds: BoundsMatrix) {
       REQUEST: "GetFeature",
       OUTPUTFORMAT: "GEOJSON",
       TYPENAMES: layer.id,
-      SRSNAME: "EPSG:4326",
+      SRSNAME: "urn:ogc:def:crs:EPSG::28992", // Request native RD coordinates for client-side transformation
       // Note: BBOX filtering seems to not work correctly with this service
       // Mapbox will handle the filtering client-side
     };

@@ -5,6 +5,8 @@ import { makeMapBoxLayer } from "./LayerStyles";
 import { makeWfsUrl, makeWmsUrl } from "./utils";
 import { bagLayerId } from "./LayerTypes";
 import { boundsNL } from "./constants";
+import { transformGeoJSONFromRD } from "./rdTransform";
+import { useState, useEffect } from "react";
 
 interface LayerSourceProps {
   layer: LayerI;
@@ -14,6 +16,37 @@ interface LayerSourceProps {
 export function LayerSource({ layer, bounds = boundsNL }: LayerSourceProps) {
   let mapBoxLayers = makeMapBoxLayer(layer);
   const effectiveBounds = bounds || boundsNL;
+  const [geojsonData, setGeojsonData] = useState<any>(null);
+
+  // For GeoJSON sources from ArcGIS, fetch and transform from EPSG:28992
+  useEffect(() => {
+    if (layer.type !== "raster") {
+      const wfsUrl = makeWfsUrl(layer, effectiveBounds);
+      const isArcGIS = layer.url?.includes('arcgis');
+
+      console.log(`📡 Fetching WFS data for ${layer.name} from ${wfsUrl}`);
+
+      fetch(wfsUrl)
+        .then(response => response.json())
+        .then(data => {
+          // Check if this is RD data that needs transformation
+          const crsName = data.crs?.properties?.name;
+          const isRD = crsName?.includes('28992') || crsName?.includes('EPSG::28992');
+
+          if (isArcGIS && isRD) {
+            console.log(`🔄 Layer ${layer.name} is in EPSG:28992, transforming...`);
+            const transformed = transformGeoJSONFromRD(data);
+            setGeojsonData(transformed);
+          } else {
+            console.log(`✅ Layer ${layer.name} is already in WGS84`);
+            setGeojsonData(data);
+          }
+        })
+        .catch(error => {
+          console.error(`❌ Error fetching WFS data for ${layer.name}:`, error);
+        });
+    }
+  }, [layer, effectiveBounds]);
 
   if (layer.type == "raster") {
     return (
@@ -31,11 +64,13 @@ export function LayerSource({ layer, bounds = boundsNL }: LayerSourceProps) {
     );
   }
 
-  // For GeoJSON sources, we use the bounds in the WFS URL but don't pass it as a prop
-  const wfsUrl = makeWfsUrl(layer, effectiveBounds);
+  // For GeoJSON sources, wait for data to be fetched and potentially transformed
+  if (!geojsonData) {
+    return null;
+  }
 
   return (
-    <Source id={layer.id} type="geojson" data={wfsUrl}>
+    <Source id={layer.id} type="geojson" data={geojsonData}>
       {mapBoxLayers.map(mapBoxLayer => (
         <Layer {...mapBoxLayer} key={mapBoxLayer.id} />
       ))}
