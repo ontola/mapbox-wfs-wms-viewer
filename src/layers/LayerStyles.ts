@@ -19,7 +19,6 @@ export function makeMapBoxLayer(layer: LayerI): AnyLayer[] {
     let strokeColor: any = "#000000";
 
     // Apply ArcGIS style if available
-    console.log(`[LayerStyles] Checking style for ${layer.id}`, layer.styleInfo);
 
     if (layer.styleInfo) {
       if (layer.styleInfo.type === "uniqueValue" && layer.styleInfo.field1) {
@@ -59,8 +58,6 @@ export function makeMapBoxLayer(layer: LayerI): AnyLayer[] {
 
         // Default color
         matchExpression.push(stringToColor(layer.id));
-
-        console.log(`[LayerStyles] Generated Expression:`, JSON.stringify(matchExpression));
 
         fillColor = matchExpression;
       } else if (layer.styleInfo.type === "simple" && layer.styleInfo.symbol) {

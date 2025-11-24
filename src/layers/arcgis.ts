@@ -74,8 +74,6 @@ export const findLayerIdByName = async (
       ? wfsLayerName.split(":")[1]
       : wfsLayerName;
 
-    console.log(`Looking for ArcGIS layer matching: ${cleanName} (original: ${wfsLayerName})`);
-
     // Try to find a match
     const layer = data.layers.find((l: any) => {
       const lName = l.name;
@@ -91,7 +89,6 @@ export const findLayerIdByName = async (
     });
 
     if (layer) {
-      console.log(`Found matching ArcGIS layer: ${layer.name} (${layer.id})`);
       return layer.id.toString();
     }
 
