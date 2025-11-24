@@ -161,22 +161,11 @@ const processWfsCapabilities = (
     };
   });
 
-  // If no layers were found but we got a response, create a fallback layer
+  // Log if no layers were found
   if (layers.length === 0 && text.length > 0) {
-    console.log(
-      `No layers found for WFS service: ${service.name}. Creating fallback layer.`
+    console.warn(
+      `No layers found for WFS service: ${service.name}. The service may not have any FeatureTypes defined.`
     );
-
-    // Create a fallback layer with a generic ID
-    layers.push({
-      name: `${service.name} (Default Layer)`,
-      id: "layer",
-      visible: false,
-      type: "vector",
-      url: service.url,
-      textField: service.textField,
-      serviceId: service.name,
-    });
   }
 
   return layers;

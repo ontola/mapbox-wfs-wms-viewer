@@ -30,6 +30,7 @@ import { LayerSource } from "./layers/LayerSource";
 import { bagLayerId } from "./layers/LayerTypes";
 import { bagLayer } from "./layers/LayerStyles";
 import { boundsUtrecht } from "./layers/constants";
+import { getMapViewFromUrl, setMapViewInUrl } from "./urlState";
 
 export const mapStartState = {
   latitude: 52.0907,
@@ -69,7 +70,11 @@ export function Map() {
     layers,
   } = useContext(AppContext);
   const mapRef = useRef<MapRef>();
-  const [viewState, setViewState] = useState(mapStartState);
+  // Initialize view state from URL or use default
+  const [viewState, setViewState] = useState(() => {
+    const urlView = getMapViewFromUrl();
+    return urlView || mapStartState;
+  });
   const [hoverInfo, setHoverInfo] = useState(null);
   const [clickedFeature, setClickedFeature] = useState(null);
   const [area, setArea] = useState<number | null>(null);
@@ -77,6 +82,8 @@ export function Map() {
   const [currentBounds, setCurrentBounds] = useState<LngLatBounds | null>(null);
   // Add a ref to store the MapboxDraw instance
   const drawRef = useRef<any>(null);
+  // Ref to store timeout for debouncing URL updates
+  const updateUrlTimeoutRef = useRef<number | null>(null);
 
   const handleHover = useCallback(
     (event) => {
@@ -267,6 +274,16 @@ export function Map() {
         onMouseMove={handleHover}
         onMouseOut={() => setHoverInfo(null)}
         onClick={handleMapClick}
+        onMove={(evt) => {
+          setViewState(evt.viewState);
+          // Debounce URL updates
+          if (updateUrlTimeoutRef.current) {
+            clearTimeout(updateUrlTimeoutRef.current);
+          }
+          updateUrlTimeoutRef.current = setTimeout(() => {
+            setMapViewInUrl(evt.viewState.latitude, evt.viewState.longitude, evt.viewState.zoom);
+          }, 500);
+        }}
         style={{ width: "100%", height: "100%", flexBasis: "600px", flex: 1 }}
         mapStyle="mapbox://styles/joepio/clefv1fk2001x01msvlmxl79g"
         ref={mapRef}

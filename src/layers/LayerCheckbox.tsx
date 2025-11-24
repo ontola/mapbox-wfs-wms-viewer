@@ -36,6 +36,7 @@ export function LayerCheckbox({ layer, setSearchTerm }: LayerCheckboxProps) {
       onChange={handleChange}
       label={layer.name}
       className="layer-checkbox"
+      data-layer-id={layer.id}
     />
   );
 }

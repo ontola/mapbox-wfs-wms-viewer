@@ -7,9 +7,10 @@ interface CustomCheckboxProps {
   label: string;
   count?: number;
   className?: string;
+  [key: string]: any; // Allow any additional props like data-* attributes
 }
 
-export function CustomCheckbox({ checked, onChange, label, count, className = "" }: CustomCheckboxProps) {
+export function CustomCheckbox({ checked, onChange, label, count, className = "", ...rest }: CustomCheckboxProps) {
   const handleClick = (e: React.MouseEvent) => {
     // Prevent default behavior if the click is not on the input element
     if ((e.target as HTMLElement).tagName.toLowerCase() !== "input") {
@@ -19,7 +20,13 @@ export function CustomCheckbox({ checked, onChange, label, count, className = ""
   };
 
   return (
-    <div className={`custom-checkbox-container ${className}`} onClick={handleClick}>
+    <div
+      className={`custom-checkbox-container ${className}`}
+      onClick={handleClick}
+      role="checkbox"
+      aria-checked={checked}
+      {...rest}
+    >
       <div className={`custom-checkbox ${checked ? 'checked' : ''}`}>
         {checked && <CheckIcon className="check-icon" />}
       </div>

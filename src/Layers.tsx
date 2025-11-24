@@ -296,19 +296,18 @@ export function LayerSelector() {
           </button>
         )}
       </div>
-      <div className="layers-checkboxes">
-        {isLoading ? (
+      <div className="layers-checkboxes" data-testid="layer-selector">
+        {filteredLayerGroups.map(group => (
+          <LayerGroup
+            key={group.serviceId}
+            title={group.title}
+            layers={group.layers}
+            isExpanded={!!searchTerm}
+            setSearchTerm={setSearchTerm}
+          />
+        ))}
+        {isLoading && (
           <div className="loading-message">Loading services...</div>
-        ) : (
-          filteredLayerGroups.map(group => (
-            <LayerGroup
-              key={group.serviceId}
-              title={group.title}
-              layers={group.layers}
-              isExpanded={!!searchTerm}
-              setSearchTerm={setSearchTerm}
-            />
-          ))
         )}
       </div>
 
