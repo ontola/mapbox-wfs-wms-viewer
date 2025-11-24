@@ -19,7 +19,6 @@ import { LngLatBounds } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { AppContext } from "./App";
 import { GBPObject, getObjectType } from "./schema";
-import { Header } from "./Header";
 import { mapboxToken } from "./config";
 import { ToolTip } from "./Tooltip";
 import { Dialog } from "./Dialog";
@@ -260,7 +259,6 @@ export function Map() {
         </div>
       )}
 
-      <Header />
       <MapGL
         trackResize={true}
         id="mainMap"

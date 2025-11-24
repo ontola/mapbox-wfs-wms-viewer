@@ -88,21 +88,22 @@ export interface WFSCapabilities {
   };
 }
 
-export interface WFSService {
+export type ServiceType = "WFS" | "WMS";
+
+export interface Service {
   /** Show to the user */
   name: string;
   /** Endpoint, with version e.g. `https://service.pdok.nl/cbs/wijkenbuurten/2024/wfs/v1_0` */
   url: string;
   description?: string;
-  /** If true, the service does not have an SRS */
+  type: ServiceType;
+  /** If true, the service does not have an SRS (WFS only) */
   noSRS?: boolean;
-  /** This is used to render the text of the symbol layer */
+  /** This is used to render the text of the symbol layer (WFS only) */
   textField?: string;
 }
 
-export interface WMService {
-  name: string;
-  url: string;
-  /** Description of the WMS service */
-  description?: string;
-}
+/** @deprecated Use Service instead */
+export type WFSService = Service;
+/** @deprecated Use Service instead */
+export type WMService = Service;

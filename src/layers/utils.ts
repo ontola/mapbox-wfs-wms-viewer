@@ -3,19 +3,38 @@ import { LayerI } from "./LayerTypes";
 
 export function makeWfsUrl(layer: LayerI, bounds: BoundsMatrix) {
   const url = new URL(layer.url);
-  const params = {
-    SERVICE: "WFS",
-    VERSION: "1.1.0",
-    REQUEST: "GetFeature",
-    outputFormat: "application/json",
-    acceptsFormat: "application/json",
-    typeNames: layer.id,
-    srsName: "EPSG:4326",
-    bbox: `${bounds.join(",")}${
-      layer.url.includes("utrecht") ? ",EPSG:4326" : ""
-    }`,
-  };
-  url.search = new URLSearchParams(params).toString();
+
+  // ESRI ArcGIS WFS services use WFS 2.0.0 and different parameter names
+  const isEsriService = layer.url.includes('arcgis');
+
+  if (isEsriService) {
+    const params = {
+      SERVICE: "WFS",
+      VERSION: "2.0.0",
+      REQUEST: "GetFeature",
+      OUTPUTFORMAT: "GEOJSON",
+      TYPENAMES: layer.id,
+      SRSNAME: "EPSG:4326",
+      // Note: BBOX filtering seems to not work correctly with this service
+      // Mapbox will handle the filtering client-side
+    };
+    url.search = new URLSearchParams(params).toString();
+  } else {
+    const params = {
+      SERVICE: "WFS",
+      VERSION: "1.1.0",
+      REQUEST: "GetFeature",
+      outputFormat: "application/json",
+      acceptsFormat: "application/json",
+      typeNames: layer.id,
+      srsName: "EPSG:4326",
+      bbox: `${bounds.join(",")}${
+        layer.url.includes("utrecht") ? ",EPSG:4326" : ""
+      }`,
+    };
+    url.search = new URLSearchParams(params).toString();
+  }
+
   return url.toString();
 }
 

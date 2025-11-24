@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { LayerI, WFSService, WMService } from "./LayerTypes";
+import { useState, useEffect, useMemo } from "react";
+import { LayerI, Service } from "./LayerTypes";
 
 interface ServiceResult {
   layers: LayerI[];
@@ -133,22 +133,33 @@ const fetchServiceCapabilities = async (
 const processWfsCapabilities = (
   xmlDoc: Document,
   text: string,
-  service: WFSService
+  service: Service
 ): LayerI[] => {
-  const featureTypeNodes = xmlDoc.getElementsByTagName("FeatureType");
+  // Try both namespaced and non-namespaced element names
+  let featureTypeNodes = xmlDoc.getElementsByTagNameNS("http://www.opengis.net/wfs/2.0", "FeatureType");
+  if (featureTypeNodes.length === 0) {
+    featureTypeNodes = xmlDoc.getElementsByTagName("FeatureType");
+  }
 
-  const layers: LayerI[] = Array.from(featureTypeNodes).map((node) => ({
-    name:
-      node.getElementsByTagName("Title")[0]?.textContent ||
-      node.getElementsByTagName("Name")[0]?.textContent ||
-      "",
-    id: node.getElementsByTagName("Name")[0]?.textContent || "",
-    visible: false,
-    type: "vector",
-    url: service.url,
-    textField: service.textField,
-    serviceId: service.name,
-  }));
+  const layers: LayerI[] = Array.from(featureTypeNodes).map((node) => {
+    // Try to get Name with namespace first, then without
+    const nameElement =
+      node.getElementsByTagNameNS("http://www.opengis.net/wfs/2.0", "Name")[0] ||
+      node.getElementsByTagName("Name")[0];
+    const titleElement =
+      node.getElementsByTagNameNS("http://www.opengis.net/wfs/2.0", "Title")[0] ||
+      node.getElementsByTagName("Title")[0];
+
+    return {
+      name: titleElement?.textContent || nameElement?.textContent || "",
+      id: nameElement?.textContent || "",
+      visible: false,
+      type: "vector" as const,
+      url: service.url,
+      textField: service.textField,
+      serviceId: service.name,
+    };
+  });
 
   // If no layers were found but we got a response, create a fallback layer
   if (layers.length === 0 && text.length > 0) {
@@ -177,7 +188,7 @@ const processWfsCapabilities = (
 const processWmsCapabilities = (
   xmlDoc: Document,
   text: string,
-  service: WMService
+  service: Service
 ): LayerI[] => {
   const layerNodes = xmlDoc.getElementsByTagName("Layer");
 
@@ -360,14 +371,16 @@ const processWmsCapabilities = (
  * This avoids the React hooks order issue by ensuring a fixed number of hooks
  */
 export function useAllServices(
-  wfsServices: WFSService[],
-  wmsServices: WMService[],
+  services: Service[],
   serviceUpdateCounter: number = 0
 ): {
   allLayers: LayerI[];
   isLoading: boolean;
   errors: Error[];
 } {
+  // Filter services by type using useMemo to prevent infinite loop
+  const wfsServices = useMemo(() => services.filter(s => s.type === "WFS"), [services]);
+  const wmsServices = useMemo(() => services.filter(s => s.type === "WMS"), [services]);
   const [allLayers, setAllLayers] = useState<LayerI[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errors, setErrors] = useState<Error[]>([]);
@@ -473,7 +486,7 @@ export function useAllServices(
     };
 
     fetchAllServices();
-  }, [wfsServices, wmsServices, serviceUpdateCounter]);
+  }, [services, serviceUpdateCounter]);
 
   // Combine all layers and update loading state
   useEffect(() => {
@@ -533,7 +546,7 @@ export function useAllServices(
       wmsServices.length > 0 ? wmsResults.length === wmsServices.length : true;
 
     setIsLoading(!(wfsLoaded && wmsLoaded));
-  }, [wfsResults, wmsResults, wfsServices.length, wmsServices.length]);
+  }, [wfsResults, wmsResults, wfsServices, wmsServices]);
 
   return { allLayers, isLoading, errors };
 }

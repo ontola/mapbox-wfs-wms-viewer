@@ -1,4 +1,4 @@
-import { WFSService, WMService } from "./LayerTypes";
+import { Service } from "./LayerTypes";
 
 /**
  * Attempts to detect if a URL is a WFS or WMS service
@@ -7,7 +7,7 @@ import { WFSService, WMService } from "./LayerTypes";
  */
 export async function detectServiceType(url: string): Promise<{
   type: "WFS" | "WMS" | null;
-  service: WFSService | WMService | null;
+  service: Service | null;
   error?: string;
 }> {
   // Clean the URL by removing any existing query parameters
@@ -52,6 +52,7 @@ export async function detectServiceType(url: string): Promise<{
               xmlDoc.getElementsByTagName("Abstract")[0]?.textContent ||
               xmlDoc.getElementsByTagName("ows:Abstract")[0]?.textContent ||
               `Automatically detected WFS service: ${title}`,
+            type: "WFS",
           },
         };
       } else {
@@ -206,6 +207,7 @@ export async function detectServiceType(url: string): Promise<{
             name: title,
             url: baseUrl,
             description: description,
+            type: "WMS",
           },
         };
       } else {
@@ -258,6 +260,7 @@ export async function detectServiceType(url: string): Promise<{
                 name: title,
                 url: baseUrl,
                 description: `WMS service from: ${baseUrl}`,
+                type: "WMS",
               },
               error:
                 "Warning: Service responded but couldn't be fully validated. Some layers may not load correctly.",

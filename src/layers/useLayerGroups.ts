@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { LayerI } from "./LayerTypes";
-import { wfsServices, wmsServices } from "./defaultServices";
+import { services } from "./defaultServices";
 
 export interface LayerGroup {
   serviceId: string;
@@ -13,16 +13,8 @@ export function useLayerGroups(layers: LayerI[]): LayerGroup[] {
     // Create a map to store layers by group
     const groupedLayers = new Map<string, LayerI[]>();
 
-    // Group layers by WFS service
-    wfsServices.forEach((service) => {
-      groupedLayers.set(
-        service.name,
-        layers.filter((layer) => layer.serviceId === service.name)
-      );
-    });
-
-    // Group layers by WMS service
-    wmsServices.forEach((service) => {
+    // Group layers by service
+    services.forEach((service) => {
       groupedLayers.set(
         service.name,
         layers.filter(

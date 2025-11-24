@@ -7,7 +7,7 @@ import { BoundsMatrix } from "./bounds";
 import { LayerGroup } from "./layers/LayerGroup";
 import { LayerI } from "./layers/LayerTypes";
 import { useLayerGroups } from "./layers/useLayerGroups";
-import { wfsServices, wmsServices } from "./layers/defaultServices";
+import { services } from "./layers/defaultServices";
 import "./components/CustomCheckbox.css";
 import { detectServiceType } from "./layers/detectService";
 import { useAllServices } from "./layers/useGEOServices";
@@ -34,7 +34,7 @@ export function LayerSelector() {
   const [serviceUpdateCounter, setServiceUpdateCounter] = useState(0);
 
   // Use our new hook to fetch all services at once
-  const { allLayers: serviceLayers, isLoading, errors } = useAllServices(wfsServices, wmsServices, serviceUpdateCounter);
+  const { allLayers: serviceLayers, isLoading, errors } = useAllServices(services, serviceUpdateCounter);
 
   // Group layers using the hook
   const layerGroups = useLayerGroups(layers);
@@ -56,18 +56,10 @@ export function LayerSelector() {
         const matchesId = layer.id.toLowerCase().includes(searchTermLower);
         const matchesService = group.title.toLowerCase().includes(searchTermLower);
 
-        // Check in both WFS and WMS services for descriptions
+        // Check service descriptions
         let matchesDescription = false;
-
-        // Check WFS service descriptions
-        if (group.serviceId && !group.serviceId.startsWith('WMS:')) {
-          matchesDescription = wfsServices.find(s => s.name === layer.serviceId)?.description?.toLowerCase().includes(searchTermLower) || false;
-        }
-
-        // Check WMS service (no descriptions in WMS services currently, but added for future)
-        if (group.serviceId && group.serviceId.startsWith('WMS:')) {
-          const wmsServiceName = group.serviceId.substring(5);
-          matchesDescription = wmsServices.find(s => s.name === wmsServiceName)?.description?.toLowerCase().includes(searchTermLower) || false;
+        if (group.serviceId) {
+          matchesDescription = services.find(s => s.name === layer.serviceId)?.description?.toLowerCase().includes(searchTermLower) || false;
         }
 
         return matchesName || matchesId || matchesService || matchesDescription;
@@ -174,31 +166,16 @@ export function LayerSelector() {
         // We can still add the service, but show the warning
         const warningMessage = result.error;
 
-        // Add the service to the appropriate list
-        if (result.type === 'WFS') {
-          // Check if service already exists
-          const exists = wfsServices.some(s => s.url === result.service?.url);
-          if (!exists && result.service) {
-            wfsServices.push(result.service as any);
-            setServiceSuccess(`Added WFS service: ${result.service.name} (with warning: ${warningMessage})`);
-            setServiceUrl("");
-            // Increment the counter to trigger a re-fetch
-            setServiceUpdateCounter(prev => prev + 1);
-          } else {
-            setServiceError("This service is already added");
-          }
-        } else if (result.type === 'WMS') {
-          // Check if service already exists
-          const exists = wmsServices.some(s => s.url === result.service?.url);
-          if (!exists && result.service) {
-            wmsServices.push(result.service as any);
-            setServiceSuccess(`Added WMS service: ${result.service.name} (with warning: ${warningMessage})`);
-            setServiceUrl("");
-            // Increment the counter to trigger a re-fetch
-            setServiceUpdateCounter(prev => prev + 1);
-          } else {
-            setServiceError("This service is already added");
-          }
+        // Check if service already exists
+        const exists = services.some(s => s.url === result.service?.url);
+        if (!exists && result.service) {
+          services.push(result.service);
+          setServiceSuccess(`Added ${result.type} service: ${result.service.name} (with warning: ${warningMessage})`);
+          setServiceUrl("");
+          // Increment the counter to trigger a re-fetch
+          setServiceUpdateCounter(prev => prev + 1);
+        } else {
+          setServiceError("This service is already added");
         }
         return;
       }
@@ -208,31 +185,17 @@ export function LayerSelector() {
         return;
       }
 
-      // Add the service to the appropriate list
-      if (result.type === 'WFS') {
-        // Check if service already exists
-        const exists = wfsServices.some(s => s.url === result.service?.url);
-        if (!exists && result.service) {
-          wfsServices.push(result.service as any);
-          setServiceSuccess(`Added WFS service: ${result.service.name}`);
-          setServiceUrl("");
-          // Increment the counter to trigger a re-fetch
-          setServiceUpdateCounter(prev => prev + 1);
-        } else {
-          setServiceError("This service is already added");
-        }
-      } else if (result.type === 'WMS') {
-        // Check if service already exists
-        const exists = wmsServices.some(s => s.url === result.service?.url);
-        if (!exists && result.service) {
-          wmsServices.push(result.service as any);
-          setServiceSuccess(`Added WMS service: ${result.service.name}`);
-          setServiceUrl("");
-          // Increment the counter to trigger a re-fetch
-          setServiceUpdateCounter(prev => prev + 1);
-        } else {
-          setServiceError("This service is already added");
-        }
+      // Add the service to the unified list
+      // Check if service already exists
+      const exists = services.some(s => s.url === result.service?.url);
+      if (!exists && result.service) {
+        services.push(result.service);
+        setServiceSuccess(`Added ${result.type} service: ${result.service.name}`);
+        setServiceUrl("");
+        // Increment the counter to trigger a re-fetch
+        setServiceUpdateCounter(prev => prev + 1);
+      } else {
+        setServiceError("This service is already added");
       }
     } catch (error) {
       console.error("Error in handleAddService:", error);
