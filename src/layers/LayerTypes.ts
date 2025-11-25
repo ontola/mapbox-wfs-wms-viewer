@@ -12,6 +12,8 @@ export interface LayerI {
   styleInfo?: ArcGISRenderer;
   /** Layer description from capabilities Abstract */
   description?: string;
+  /** Layer bounds in [west, south, east, north] format (WGS84) */
+  bounds?: [number, number, number, number];
 }
 
 export interface ArcGISRenderer {

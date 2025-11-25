@@ -125,6 +125,48 @@ export function Map() {
     [layers],
   );
 
+  // Track previous visible layers to detect changes
+  const prevVisibleLayerIds = useRef<Set<string>>(new Set());
+
+  // Auto-zoom to layer bounds when a layer is toggled on
+  useEffect(() => {
+    const currentVisibleLayerIds = new Set(visibleLayers.map(l => l.uniqueId || l.id));
+
+    // Find newly added layers
+    const newLayerIds = [...currentVisibleLayerIds].filter(id => !prevVisibleLayerIds.current.has(id));
+
+    if (newLayerIds.length > 0) {
+      // Find the layer object for the first new layer (assuming single toggle usually)
+      const newLayer = visibleLayers.find(l => (l.uniqueId || l.id) === newLayerIds[0]);
+
+      if (newLayer && newLayer.bounds && mapRef.current) {
+        console.log(`Zooming to bounds for layer ${newLayer.name}:`, newLayer.bounds);
+
+        // Check if bounds are valid (not all zeros or NaN)
+        const [west, south, east, north] = newLayer.bounds;
+        if (west !== 0 || south !== 0 || east !== 0 || north !== 0) {
+          try {
+            mapRef.current.fitBounds(
+              [
+                [west, south], // Southwest
+                [east, north]  // Northeast
+              ],
+              {
+                padding: 20,
+                duration: animationDuration
+              }
+            );
+          } catch (err) {
+            console.error("Error fitting bounds:", err);
+          }
+        }
+      }
+    }
+
+    // Update ref for next render
+    prevVisibleLayerIds.current = currentVisibleLayerIds;
+  }, [visibleLayers]);
+
   // Draw a polygon on the map and calculate the surface area
   useEffect(() => {
     const map = mapRef.current?.getMap();

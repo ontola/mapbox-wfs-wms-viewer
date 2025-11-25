@@ -1,4 +1,5 @@
 import { Service } from "./LayerTypes";
+import { fetchCapabilities } from "./capabilities";
 
 /**
  * Attempts to detect if a URL is a WFS or WMS service
@@ -15,18 +16,8 @@ export async function detectServiceType(url: string): Promise<{
 
   try {
     // First try WFS
-    let wfsResponse;
     try {
-      wfsResponse = await fetch(
-        `${baseUrl}?request=GetCapabilities&service=WFS`
-      );
-    } catch (fetchError) {
-      console.error("Error fetching WFS capabilities:", fetchError);
-      // Continue to try WMS
-    }
-
-    if (wfsResponse && wfsResponse.ok) {
-      const text = await wfsResponse.text();
+      const { xmlDoc, text } = await fetchCapabilities(baseUrl, "WFS");
 
       // Check if it's a valid WFS response by looking for WFS-specific elements
       if (
@@ -34,8 +25,6 @@ export async function detectServiceType(url: string): Promise<{
         text.includes("<WFS_Capabilities")
       ) {
         // Extract service name from capabilities if possible
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(text, "text/xml");
         const title =
           xmlDoc.getElementsByTagName("Title")[0]?.textContent ||
           xmlDoc.getElementsByTagName("ows:Title")[0]?.textContent ||
@@ -58,24 +47,14 @@ export async function detectServiceType(url: string): Promise<{
       } else {
         console.log("Response doesn't contain WFS capabilities markers");
       }
-    }
-
-    let wmsResponse;
-    try {
-      wmsResponse = await fetch(
-        `${baseUrl}?request=GetCapabilities&service=WMS`
-      );
     } catch (fetchError) {
-      console.error("Error fetching WMS capabilities:", fetchError);
-      return {
-        type: null,
-        service: null,
-        error: `Network error: ${fetchError.message}. This might be due to CORS restrictions or the service being unavailable.`,
-      };
+      console.error("Error fetching WFS capabilities:", fetchError);
+      // Continue to try WMS
     }
 
-    if (wmsResponse && wmsResponse.ok) {
-      const text = await wmsResponse.text();
+    // Try WMS
+    try {
+      const { xmlDoc, text } = await fetchCapabilities(baseUrl, "WMS");
 
       // Check if it's a valid WMS response
       if (
@@ -84,10 +63,6 @@ export async function detectServiceType(url: string): Promise<{
         text.includes('xmlns="http://www.opengis.net/wms"') ||
         text.includes("xmlns:esri_wms")
       ) {
-        // Extract service name from capabilities if possible
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(text, "text/xml");
-
         // Try multiple ways to get the service name
         let title = null;
 
@@ -183,8 +158,6 @@ export async function detectServiceType(url: string): Promise<{
                 .split(" ")
                 .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
                 .join(" ");
-
-              console.log("Extracted ESRI MapServer service name:", title);
             }
           }
         }
@@ -200,7 +173,6 @@ export async function detectServiceType(url: string): Promise<{
           description = `Automatically detected WMS service: ${title}`;
         }
 
-        console.log("Detected WMS service with title:", title);
         return {
           type: "WMS",
           service: {
@@ -211,7 +183,7 @@ export async function detectServiceType(url: string): Promise<{
           },
         };
       } else {
-        console.log("Response doesn't contain WMS capabilities markers");
+        // Response doesn't contain WMS capabilities markers
 
         // Check if the response contains an error message
         if (
@@ -250,8 +222,6 @@ export async function detectServiceType(url: string): Promise<{
             }
           }
 
-          console.log("Creating WMS service from URL with title:", title);
-
           // If the URL ends with WMSServer, assume it's a WMS service
           if (baseUrl.endsWith("WMSServer")) {
             return {
@@ -268,11 +238,12 @@ export async function detectServiceType(url: string): Promise<{
           }
         }
       }
-    } else if (wmsResponse) {
+    } catch (fetchError) {
+      console.error("Error fetching WMS capabilities:", fetchError);
       return {
         type: null,
         service: null,
-        error: `Service returned status ${wmsResponse.status}: ${wmsResponse.statusText}`,
+        error: `Network error: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}. This might be due to CORS restrictions or the service being unavailable.`,
       };
     }
 

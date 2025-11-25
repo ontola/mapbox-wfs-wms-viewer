@@ -39,6 +39,8 @@ export function makeWfsUrl(layer: LayerI, bounds: BoundsMatrix) {
 }
 
 export function makeWmsUrl(layer: LayerI) {
+  const url = new URL(layer.url);
+
   const params = {
     SERVICE: "WMS",
     VERSION: "1.3.0",
@@ -52,16 +54,31 @@ export function makeWmsUrl(layer: LayerI) {
     WIDTH: "1000",
     HEIGHT: "1000",
     STYLES: "",
-    bbox: "{bbox-epsg-3857}",
+    // We'll handle bbox separately to preserve the template
   };
-  const queryString = Object.entries(params)
-    .map(([key, value]) =>
-      key.toLowerCase() === "bbox"
-        ? `${key}=${value}`
-        : `${key}=${encodeURIComponent(value)}`
-    )
-    .join("&");
-  return `${layer.url}?${queryString}`;
+
+  // Set parameters, overwriting existing ones to avoid duplicates
+  Object.entries(params).forEach(([key, value]) => {
+    // Check if the parameter already exists (case-insensitive)
+    // If so, remove it first to ensure we use our casing and value
+    const existingKey = Array.from(url.searchParams.keys()).find(
+      k => k.toLowerCase() === key.toLowerCase()
+    );
+    if (existingKey) {
+      url.searchParams.delete(existingKey);
+    }
+    url.searchParams.set(key, value);
+  });
+
+  // Handle bbox specially
+  // Mapbox expects {bbox-epsg-3857} which URLSearchParams would encode
+  // We'll add a placeholder and then replace it in the string
+  url.searchParams.set("bbox", "BBOX_PLACEHOLDER");
+
+  let urlString = url.toString();
+
+  // Replace the placeholder with the unencoded template
+  return urlString.replace("BBOX_PLACEHOLDER", "{bbox-epsg-3857}");
 }
 
 export function stringToColor(str: string) {

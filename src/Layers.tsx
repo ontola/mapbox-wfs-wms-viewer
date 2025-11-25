@@ -89,13 +89,24 @@ export function LayerSelector() {
             updatedLayers.push(serviceLayer);
             hasChanges = true;
           } else {
-            // Existing layer - check if we need to update it (e.g. styleInfo added)
+            // Existing layer - check if we need to update it (e.g. styleInfo or bounds added)
             const existingLayer = updatedLayers[existingLayerIndex];
+            let layerChanged = false;
+            let newLayerState = { ...existingLayer };
+
             if (serviceLayer.styleInfo && !existingLayer.styleInfo) {
-              updatedLayers[existingLayerIndex] = {
-                ...existingLayer,
-                styleInfo: serviceLayer.styleInfo
-              };
+              newLayerState.styleInfo = serviceLayer.styleInfo;
+              layerChanged = true;
+            }
+
+            // Update bounds if available in service layer but missing in existing layer
+            if (serviceLayer.bounds && !existingLayer.bounds) {
+              newLayerState.bounds = serviceLayer.bounds;
+              layerChanged = true;
+            }
+
+            if (layerChanged) {
+              updatedLayers[existingLayerIndex] = newLayerState;
               hasChanges = true;
             }
           }
