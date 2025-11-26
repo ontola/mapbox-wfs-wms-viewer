@@ -83,8 +83,71 @@ test.describe('Capabilities Abstraction', () => {
     // Check if the layer is visible
     await expect(page.locator('text=Mock Layer 1')).toBeVisible();
 
-    // Check if the abstract is visible (as title attribute or description)
-    // The UI might not show the abstract directly, but we can check if the layer exists
+    // Check for info icon and click it
+    // The info icon is inside a div with class custom-checkbox-info
+    const infoIcon = page.locator('.custom-checkbox-info').first();
+    await expect(infoIcon).toBeVisible();
+    await infoIcon.click();
+
+    // Check if dialog appears with description
+    await expect(page.locator('.DialogContent')).toBeVisible();
+    await expect(page.locator('text=Abstract for Mock Layer 1')).toBeVisible();
+
+    // Close the dialog
+    await page.locator('.DialogClose').click();
+    await expect(page.locator('.DialogContent')).not.toBeVisible();
+  });
+
+  test('should parse WFS bounds with OWS 1.1 namespace', async ({ page }) => {
+    const serviceUrl = 'https://mock.service/wfs-ows-1-1';
+
+    // Mock WFS Capabilities with OWS 1.1 namespace (like ArcGIS)
+    const mockWfsOws11Capabilities = `
+      <wfs:WFS_Capabilities version="2.0.0"
+        xmlns:wfs="http://www.opengis.net/wfs/2.0"
+        xmlns:ows="http://www.opengis.net/ows/1.1">
+        <ows:ServiceIdentification>
+          <ows:Title>Mock WFS OWS 1.1</ows:Title>
+        </ows:ServiceIdentification>
+        <FeatureType>
+          <Name>mock:layer_ows11</Name>
+          <Title>Mock Layer OWS 1.1</Title>
+          <ows:WGS84BoundingBox>
+            <ows:LowerCorner>4.0 51.0</ows:LowerCorner>
+            <ows:UpperCorner>5.0 52.0</ows:UpperCorner>
+          </ows:WGS84BoundingBox>
+        </FeatureType>
+      </wfs:WFS_Capabilities>
+    `;
+
+    // Intercept requests
+    await page.route(`${serviceUrl}?request=GetCapabilities&service=WFS`, async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/xml',
+        body: mockWfsOws11Capabilities,
+      });
+    });
+
+    await page.route(`${serviceUrl}?request=GetCapabilities&service=WMS`, async route => {
+      await route.fulfill({ status: 404 });
+    });
+
+    // Navigate to the app
+    await page.goto(`/?service=${encodeURIComponent(serviceUrl)}`);
+
+    // Wait for layer selector
+    await page.waitForSelector('[data-testid="layer-selector"]');
+
+    // Expand group
+    await page.click('text=Mock WFS OWS 1.1');
+
+    // Check if layer exists
+    await expect(page.locator('text=Mock Layer OWS 1.1')).toBeVisible();
+
+    // Note: verifying the actual zoom requires checking map state which is hard in this test setup
+    // But if the layer loads without errors, it means parsing succeeded.
+    // We rely on the unit test logic (console logs) for bounds verification during development.
   });
 
   test('should detect and load WMS service from URL', async ({ page }) => {

@@ -1,10 +1,14 @@
-import { GeoLoc } from "instantsearch.js";
 import { LngLatBounds } from "mapbox-gl";
 
 /**
  * Bounds in the format [lng, lat, lng, lat]
  */
 export type BoundsMatrix = [number, number, number, number];
+
+interface GeoLoc {
+  lat: number;
+  lng: number;
+}
 
 /**
  * Instant Search bounds

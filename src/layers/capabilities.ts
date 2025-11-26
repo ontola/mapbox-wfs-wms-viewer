@@ -157,16 +157,25 @@ export const parseWFSCapabilities = (
 
     // Extract bounds from WGS84BoundingBox
     let bounds: [number, number, number, number] | undefined;
+
+    // Try different namespace versions and tag formats
     const boundingBoxElement =
+      node.getElementsByTagNameNS("http://www.opengis.net/ows/1.1", "WGS84BoundingBox")[0] ||
       node.getElementsByTagNameNS("http://www.opengis.net/ows", "WGS84BoundingBox")[0] ||
+      node.getElementsByTagName("ows:WGS84BoundingBox")[0] ||
       node.getElementsByTagName("WGS84BoundingBox")[0];
 
     if (boundingBoxElement) {
       const lowerCorner =
+        boundingBoxElement.getElementsByTagNameNS("http://www.opengis.net/ows/1.1", "LowerCorner")[0] ||
         boundingBoxElement.getElementsByTagNameNS("http://www.opengis.net/ows", "LowerCorner")[0] ||
+        boundingBoxElement.getElementsByTagName("ows:LowerCorner")[0] ||
         boundingBoxElement.getElementsByTagName("LowerCorner")[0];
+
       const upperCorner =
+        boundingBoxElement.getElementsByTagNameNS("http://www.opengis.net/ows/1.1", "UpperCorner")[0] ||
         boundingBoxElement.getElementsByTagNameNS("http://www.opengis.net/ows", "UpperCorner")[0] ||
+        boundingBoxElement.getElementsByTagName("ows:UpperCorner")[0] ||
         boundingBoxElement.getElementsByTagName("UpperCorner")[0];
 
       if (lowerCorner?.textContent && upperCorner?.textContent) {

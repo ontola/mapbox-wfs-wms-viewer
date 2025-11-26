@@ -319,7 +319,7 @@ export function Map() {
           if (updateUrlTimeoutRef.current) {
             clearTimeout(updateUrlTimeoutRef.current);
           }
-          updateUrlTimeoutRef.current = setTimeout(() => {
+          updateUrlTimeoutRef.current = window.setTimeout(() => {
             setMapViewInUrl(evt.viewState.latitude, evt.viewState.longitude, evt.viewState.zoom);
           }, 500);
         }}
