@@ -62,11 +62,12 @@ export const services: Service[] = [
   //   url: "https://geodata.utrecht.nl/geoserver/UtrechtOpen/wfs",
   //   type: "WFS",
   // },
-   {
-    name: "Oss Bijzondere Bomen WFS",
-    url: "https://geoportaaloss.oss.nl/arcgis/services/Dataportaal/Bijzondere_Bomen/MapServer/WFSServer",
-    type: "WFS",
-  },
+   // {
+    // name: "Oss Bijzondere Bomen WFS",
+    // url: "https://geoportaaloss.oss.nl/arcgis/services/Dataportaal/Bijzondere_Bomen/MapServer/WFSServer",
+    // type: "WFS",
+    // description: "WFS seems to be broken (returns 400), use WMS instead",
+  // },
   {
     name: "Utrecht Werfkelders WFS",
     url: "https://dservices-eu1.arcgis.com/SMnoOtmU2UWf0vRp/arcgis/services/Werfkelders/WFSServer",
