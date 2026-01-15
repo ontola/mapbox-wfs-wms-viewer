@@ -1,5 +1,5 @@
 import { useState, useEffect, Dispatch, SetStateAction } from "react";
-import { ChevronDownIcon, ChevronRightIcon } from "@radix-ui/react-icons";
+import { ChevronDownIcon, ChevronRightIcon, Share1Icon, CheckIcon } from "@radix-ui/react-icons";
 import { LayerCheckbox } from "./LayerCheckbox";
 import { LayerI } from "./LayerTypes";
 
@@ -12,6 +12,7 @@ interface LayerGroupProps {
 
 export function LayerGroup({ title, layers, isExpanded: defaultExpanded = false, setSearchTerm }: LayerGroupProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const [showCopied, setShowCopied] = useState(false);
 
   // Update isExpanded when defaultExpanded changes
   useEffect(() => {
@@ -28,15 +29,46 @@ export function LayerGroup({ title, layers, isExpanded: defaultExpanded = false,
     return `${layer.serviceId || 'noservice'}-${layer.url || 'nourl'}-${layer.id}`;
   };
 
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    // Get service URL from the first layer
+    // Remove query params if they exist to get the base service URL
+    let serviceUrl = layers.length > 0 ? layers[0].url : "";
+    if (serviceUrl) {
+      // Basic cleanup of the URL if needed, although detectService handle params
+      // We keep it as is because layers[0].url should be the service URL usually
+
+      const url = new URL(window.location.href);
+      url.search = "";
+      url.searchParams.set("service", serviceUrl);
+
+      navigator.clipboard.writeText(url.toString()).then(() => {
+        setShowCopied(true);
+        setTimeout(() => setShowCopied(false), 2000);
+      });
+    }
+  };
+
   return (
     <div className="layer-group">
-      <button
+      <div
         className="layer-group__header"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        {isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
-        <h4>{title}</h4>
-      </button>
+        <div className="layer-group__title-container">
+          {isExpanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
+          <h4>{title}</h4>
+        </div>
+
+        <button
+          className="layer-group__share-button"
+          onClick={handleShare}
+          title="Kopieer link naar deze service"
+        >
+          {showCopied ? <CheckIcon /> : <Share1Icon />}
+        </button>
+      </div>
       {isExpanded && (
         <div className="layer-group__content">
           {layers.map((layer) => (

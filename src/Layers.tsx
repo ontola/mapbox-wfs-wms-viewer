@@ -1,5 +1,5 @@
 import { Cross1Icon, MagnifyingGlassIcon, EyeOpenIcon, EyeClosedIcon, PlusIcon, InfoCircledIcon } from "@radix-ui/react-icons";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState, useRef } from "react";
 
 import { AppContext } from "./App";
 import "./Layers.css";
@@ -13,6 +13,7 @@ import "./components/CustomCheckbox.css";
 import { detectServiceType } from "./layers/detectService";
 import { useAllServices } from "./layers/useGEOServices";
 import { Legend } from "./components/Legend";
+import { getServiceUrlFromUrl } from "./urlState";
 
 export const bagLayerId = "points";
 
@@ -34,6 +35,8 @@ export function LayerSelector() {
   const [serviceSuccess, setServiceSuccess] = useState<string | null>(null);
   // Add a counter to track service updates
   const [serviceUpdateCounter, setServiceUpdateCounter] = useState(0);
+  const [autoSelectServiceUrl, setAutoSelectServiceUrl] = useState<string | null>(null);
+  const autoSelectedRef = useRef(false);
 
   // Use our new hook to fetch all services at once
   const { allLayers: serviceLayers, isLoading, errors } = useAllServices(services, serviceUpdateCounter);
@@ -69,12 +72,44 @@ export function LayerSelector() {
     })).filter(group => group.layers.length > 0);
   }, [layerGroups, searchTerm]);
 
+  // Handle service parameter from URL
+  useEffect(() => {
+    const urlService = getServiceUrlFromUrl();
+    if (urlService) {
+      // Check if it's already in services
+      const exists = services.some(s => s.url === urlService);
+
+      if (!exists) {
+        setIsAddingService(true);
+        detectServiceType(urlService).then(result => {
+          if (result.service) {
+             // check existence again to be safe
+             const existsNow = services.some(s => s.url === result.service?.url);
+             if (!existsNow) {
+               services.push(result.service);
+               setServiceUpdateCounter(c => c + 1);
+               console.log(`Auto-added service from URL: ${result.service.name}`);
+             }
+          }
+          setIsAddingService(false);
+        }).catch(err => {
+          console.error("Error auto-adding service:", err);
+          setIsAddingService(false);
+        });
+      }
+
+      // Set auto-select logic to run when layers are loaded
+      setAutoSelectServiceUrl(urlService);
+    }
+  }, []);
+
   // Add service layers to existing layers if not already present, or update them if they have new info
   useEffect(() => {
     if (serviceLayers.length > 0) {
       setLayers(prevLayers => {
         const updatedLayers = [...prevLayers];
         let hasChanges = false;
+        let autoSelected = false;
 
         serviceLayers.forEach(serviceLayer => {
           const existingLayerIndex = updatedLayers.findIndex(layer =>
@@ -112,10 +147,35 @@ export function LayerSelector() {
           }
         });
 
+        // Handle auto-selection of first layer for shared service
+        if (autoSelectServiceUrl && !autoSelectedRef.current) {
+           // Check if any visible layers exist (to avoid overriding user selection if any)
+           // If we are sharing, we assume we want to show this source.
+           // Filter for layers matching the autoSelectServiceUrl
+
+           // Find the first layer that matches the service URL
+           // We look in updatedLayers to ensure we get the fresh one
+           const matchingLayerIndex = updatedLayers.findIndex(l =>
+             (l.url && (l.url === autoSelectServiceUrl || l.url.startsWith(autoSelectServiceUrl))) &&
+             !l.visible
+           );
+
+           if (matchingLayerIndex !== -1) {
+             console.log(`Auto-selecting layer: ${updatedLayers[matchingLayerIndex].name}`);
+             updatedLayers[matchingLayerIndex] = { ...updatedLayers[matchingLayerIndex], visible: true };
+             hasChanges = true;
+             autoSelected = true;
+           }
+        }
+
+        if (autoSelected) {
+           autoSelectedRef.current = true;
+        }
+
         return hasChanges ? updatedLayers : prevLayers;
       });
     }
-  }, [serviceLayers, setLayers]);
+  }, [serviceLayers, setLayers, autoSelectServiceUrl]);
 
   // Clear success message after 5 seconds
   useEffect(() => {
@@ -334,7 +394,10 @@ export function LayerSelector() {
             key={group.serviceId}
             title={group.title}
             layers={group.layers}
-            isExpanded={!!searchTerm}
+            isExpanded={
+              !!searchTerm ||
+              (!!autoSelectServiceUrl && group.layers.some(l => l.url && (l.url === autoSelectServiceUrl || l.url.startsWith(autoSelectServiceUrl))))
+            }
             setSearchTerm={setSearchTerm}
           />
         ))}

@@ -167,11 +167,13 @@
 }
 
 /* Layer Group Styles */
-.layer-group {}
+.layer-group {
+}
 
 .layer-group__header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   width: 100%;
   padding: 0.5rem 1rem;
   background: none;
@@ -179,6 +181,11 @@
   text-align: left;
   cursor: pointer;
   border-bottom: 1px solid #eee;
+}
+
+.layer-group__title-container {
+  display: flex;
+  align-items: center;
 }
 
 .layer-group__header:hover {
@@ -190,6 +197,24 @@
   margin-left: 0.5rem;
   font-size: 14px;
   font-weight: 500;
+  color: #333;
+}
+
+.layer-group__share-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.layer-group__share-button:hover {
+  background-color: #e0e0e0;
   color: #333;
 }
 

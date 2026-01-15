@@ -125,46 +125,58 @@ export function Map() {
     [layers],
   );
 
-  // Track previous visible layers to detect changes
-  const prevVisibleLayerIds = useRef<Set<string>>(new Set());
+  // Track previous visible layers to detect changes and bounds updates
+  const prevVisibleLayersRef = useRef<globalThis.Map<string, boolean>>(new globalThis.Map()); // Map<uniqueId, hasBounds>
 
-  // Auto-zoom to layer bounds when a layer is toggled on
+  // Auto-zoom to layer bounds when a layer is toggled on OR when bounds become available
   useEffect(() => {
-    const currentVisibleLayerIds = new Set(visibleLayers.map(l => l.uniqueId || l.id));
+    const currentVisibleLayersMap = new globalThis.Map<string, boolean>();
+    let layerToZoomTo: any = null;
 
-    // Find newly added layers
-    const newLayerIds = [...currentVisibleLayerIds].filter(id => !prevVisibleLayerIds.current.has(id));
+    visibleLayers.forEach(layer => {
+      const id = layer.uniqueId || layer.id;
+      const hasBounds = !!layer.bounds; // Store whether it has bounds
+      currentVisibleLayersMap.set(id, hasBounds);
 
-    if (newLayerIds.length > 0) {
-      // Find the layer object for the first new layer (assuming single toggle usually)
-      const newLayer = visibleLayers.find(l => (l.uniqueId || l.id) === newLayerIds[0]);
+      // Check if we need to zoom to this layer
+      // Case 1: Layer is new (was not visible before)
+      // Case 2: Layer was visible but didn't have bounds, and now it does (enriched from capabilities)
+      const wasVisible = prevVisibleLayersRef.current.has(id);
+      const prevHadBounds = prevVisibleLayersRef.current.get(id);
 
-      if (newLayer && newLayer.bounds && mapRef.current) {
-        console.log(`Zooming to bounds for layer ${newLayer.name}:`, newLayer.bounds);
+      if (!wasVisible || (!prevHadBounds && hasBounds)) {
+        // Only potential candidate if it actually has bounds now
+        if (hasBounds) {
+          layerToZoomTo = layer;
+        }
+      }
+    });
 
-        // Check if bounds are valid (not all zeros or NaN)
-        const [west, south, east, north] = newLayer.bounds;
-        if (west !== 0 || south !== 0 || east !== 0 || north !== 0) {
-          try {
-            mapRef.current.fitBounds(
-              [
-                [west, south], // Southwest
-                [east, north]  // Northeast
-              ],
-              {
-                padding: 20,
-                duration: animationDuration
-              }
-            );
-          } catch (err) {
-            console.error("Error fitting bounds:", err);
-          }
+    if (layerToZoomTo && layerToZoomTo.bounds && mapRef.current) {
+      console.log(`Zooming to bounds for layer ${layerToZoomTo.name}:`, layerToZoomTo.bounds);
+
+      // Check if bounds are valid (not all zeros or NaN)
+      const [west, south, east, north] = layerToZoomTo.bounds;
+      if (west !== 0 || south !== 0 || east !== 0 || north !== 0) {
+        try {
+          mapRef.current.fitBounds(
+            [
+              [west, south], // Southwest
+              [east, north]  // Northeast
+            ],
+            {
+              padding: 20,
+              duration: animationDuration
+            }
+          );
+        } catch (err) {
+          console.error("Error fitting bounds:", err);
         }
       }
     }
 
     // Update ref for next render
-    prevVisibleLayerIds.current = currentVisibleLayerIds;
+    prevVisibleLayersRef.current = currentVisibleLayersMap;
   }, [visibleLayers]);
 
   // Draw a polygon on the map and calculate the surface area

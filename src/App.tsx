@@ -48,31 +48,12 @@ const App = () => {
     }
   }, []);
 
-  // Handle service URL parameter - auto-detect and load first layer
+  // Handle service URL parameter logic moved to LayerSelector
   useEffect(() => {
-    const serviceUrl = getServiceUrlFromUrl();
-    if (serviceUrl && layers.length === 0) {
-      // Only auto-load if no layers are already loaded
-      detectServiceType(serviceUrl).then(result => {
-        if (result.service && result.type) {
-          console.log(`Auto-loading service from URL: ${result.service.name}`);
-          // Import services dynamically to add the new service
-          import('./layers/defaultServices').then(({ services }) => {
-            // Check if service already exists
-            const exists = services.some(s => s.url === result.service?.url);
-            if (!exists && result.service) {
-              services.push(result.service);
-              // Force a re-render by updating a counter or similar
-              // The useAllServices hook will pick up the new service
-              window.location.reload(); // Simple approach: reload to pick up new service
-            }
-          });
-        } else {
-          console.error(`Failed to detect service from URL: ${serviceUrl}`, result.error);
-        }
-      });
-    }
-  }, [layers.length]);
+    // This hook previously handled auto-loading services from URL but caused infinite reloads.
+    // The logic has been moved to LayerSelector.tsx which is better equipped to handle
+    // service loading and layer selection.
+  }, []);
 
   // Sync visible layers to URL when they change
   useEffect(() => {
