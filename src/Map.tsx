@@ -16,6 +16,7 @@ import MapGL, {
   Source,
 } from "react-map-gl";
 import { LngLatBounds } from "mapbox-gl";
+import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { AppContext } from "./App";
 import { mapboxToken } from "./config";
@@ -24,6 +25,10 @@ import { Dialog } from "./Dialog";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import * as turf from "@turf/turf";
+
+// Prevent WMS servers (like services.nijmegen.nl Layer7 API gateways) from returning 500 errors due to rate limiting
+mapboxgl.maxParallelImageRequests = 6;
+
 import { boundsLngLatToIS, boundsLngLatToMatrix } from "./bounds";
 import { LayerSource } from "./layers/LayerSource";
 import { boundsUtrecht } from "./layers/constants";
@@ -166,7 +171,7 @@ export function Map() {
             ],
             {
               padding: 20,
-              duration: animationDuration
+              duration: 0
             }
           );
         } catch (err) {

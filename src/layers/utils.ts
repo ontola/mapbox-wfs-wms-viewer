@@ -5,7 +5,7 @@ export function makeWfsUrl(layer: LayerI, bounds: BoundsMatrix) {
   const url = new URL(layer.url);
 
   // ESRI ArcGIS WFS services use WFS 2.0.0 and different parameter names
-  const isEsriService = layer.url.includes('arcgis');
+  const isEsriService = layer.url.includes("arcgis");
 
   if (isEsriService) {
     const params = {
@@ -50,9 +50,9 @@ export function makeWmsUrl(layer: LayerI) {
     LAYERS: layer.id,
     DPI: "113",
     CRS: "EPSG:3857",
-    FORMAT_OPTIONS: "dpi:113",
-    WIDTH: "1000",
-    HEIGHT: "1000",
+    FORMAT_OPTIONS: "dpi:96",
+    WIDTH: "1024",
+    HEIGHT: "1024",
     STYLES: "",
     // We'll handle bbox separately to preserve the template
   };
@@ -62,7 +62,7 @@ export function makeWmsUrl(layer: LayerI) {
     // Check if the parameter already exists (case-insensitive)
     // If so, remove it first to ensure we use our casing and value
     const existingKey = Array.from(url.searchParams.keys()).find(
-      k => k.toLowerCase() === key.toLowerCase()
+      (k) => k.toLowerCase() === key.toLowerCase(),
     );
     if (existingKey) {
       url.searchParams.delete(existingKey);

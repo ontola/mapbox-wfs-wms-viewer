@@ -52,7 +52,7 @@ export function LayerSource({ layer, bounds = boundsNL }: LayerSourceProps) {
     return (
       <Source
         type="raster"
-        tileSize={1000}
+        tileSize={512}
         bounds={effectiveBounds}
         tiles={[makeWmsUrl(layer)]}
         scheme="xyz"
