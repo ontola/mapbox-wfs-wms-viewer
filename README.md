@@ -26,13 +26,9 @@ The map viewer can be controlled via URL search parameters. This allows you to c
 - `lng`: Longitude of the map center (e.g., `5.0000`).
 - `zoom`: The zoom level of the map (e.g., `8.02`).
 
-### Example: Setting Map View
+### Example: Loading a Service, setting name, logo, favicon and color
 
-`http://localhost:3030/?lat=52.08&lng=5.11&zoom=10`
-
-### Example: Loading a Service
-
-`http://localhost:3030/?service=https://services.nijmegen.nl/geoservices/extern_Cultuurhistorie/ows?request=getCapabilities&service=WMS`
+`http://localhost:3030/?service=https://services.nijmegen.nl/geoservices/extern_Cultuurhistorie/ows?request=getCapabilities&service=WMS&name=Nijmegen&logo=https://en.intonijmegen.com/build/assets/logo.986ea2a747c1189bb935.svg&favicon=https://en.intonijmegen.com/build/assets/favicon.31fd6d719b8b50a9b1b4.ico&color=%231a5a96`
 
 ### Encoding layers
 

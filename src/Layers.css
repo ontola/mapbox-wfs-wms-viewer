@@ -27,7 +27,7 @@
 
 .bag-layer-count {
   font-size: 13px;
-  color: #0066ff;
+  color: var(--primary-color);
 }
 
 .selected-layers {
@@ -108,7 +108,7 @@
 }
 
 .toggle-layer-button.active {
-  color: #0066ff;
+  color: var(--primary-color);
 }
 
 .toggle-layer-button svg {
@@ -250,8 +250,8 @@
 }
 
 .custom-checkbox.checked {
-  background-color: #0066ff;
-  border-color: #0066ff;
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
 }
 
 .check-icon {
@@ -291,7 +291,7 @@
 }
 
 .add-service-button {
-  background: #4a90e2;
+  background: var(--primary-color);
   color: white;
   border: none;
   border-radius: 4px;
@@ -304,7 +304,7 @@
 }
 
 .add-service-button:hover {
-  background: #3a80d2;
+  filter: brightness(0.9);
 }
 
 .add-service-button:disabled {
@@ -344,14 +344,14 @@
 }
 
 .info-icon {
-  color: #4a90e2;
+  color: var(--primary-color);
   cursor: pointer;
   width: 16px;
   height: 16px;
 }
 
 .info-icon:hover {
-  color: #3a80d2;
+  filter: brightness(0.9);
 }
 
 .tooltip-content {

@@ -19,8 +19,8 @@
 }
 
 .custom-checkbox.checked {
-  background-color: #0066ff;
-  border-color: #0066ff;
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
 }
 
 .check-icon {
@@ -51,7 +51,7 @@
 }
 
 .custom-checkbox-info:hover {
-  color: #0066ff;
+  color: var(--primary-color);
 }
 
 /* Dialog Styles */
@@ -66,7 +66,9 @@
 .DialogContent {
   background-color: white;
   border-radius: 6px;
-  box-shadow: 0 10px 38px -10px rgba(22, 23, 24, 0.35), 0 10px 20px -15px rgba(22, 23, 24, 0.2);
+  box-shadow:
+    0 10px 38px -10px rgba(22, 23, 24, 0.35),
+    0 10px 20px -15px rgba(22, 23, 24, 0.2);
   position: fixed;
   top: 50%;
   left: 50%;
