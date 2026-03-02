@@ -21,8 +21,8 @@ export function useLayerGroups(layers: LayerI[]): LayerGroup[] {
           (layer) =>
             // Match by URL or by serviceId
             layer.url?.startsWith(service.url) ||
-            layer.serviceId === service.name
-        )
+            layer.serviceId === service.name,
+        ),
       );
     });
 

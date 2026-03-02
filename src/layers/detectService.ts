@@ -26,8 +26,8 @@ export async function detectServiceType(url: string): Promise<{
       ) {
         // Extract service name from capabilities if possible
         const title =
-          xmlDoc.getElementsByTagName("Title")[0]?.textContent ||
           xmlDoc.getElementsByTagName("ows:Title")[0]?.textContent ||
+          xmlDoc.getElementsByTagName("Title")[0]?.textContent ||
           baseUrl.split("/").pop() ||
           "Unknown Service";
 
@@ -114,7 +114,7 @@ export async function detectServiceType(url: string): Promise<{
             if (
               urlParts[i] &&
               !["MapServer", "WMSServer", "server", "services"].includes(
-                urlParts[i]
+                urlParts[i],
               )
             ) {
               title = urlParts[i].replace(/_/g, " ");
@@ -138,7 +138,7 @@ export async function detectServiceType(url: string): Promise<{
           // Extract the service name from the URL path
           const urlParts = baseUrl.split("/");
           const mapServerIndex = urlParts.findIndex(
-            (part) => part === "MapServer"
+            (part) => part === "MapServer",
           );
 
           if (mapServerIndex > 0) {
@@ -209,7 +209,7 @@ export async function detectServiceType(url: string): Promise<{
             if (
               urlParts[i] &&
               !["MapServer", "WMSServer", "server", "services"].includes(
-                urlParts[i]
+                urlParts[i],
               )
             ) {
               title = urlParts[i].replace(/_/g, " ");
@@ -243,7 +243,9 @@ export async function detectServiceType(url: string): Promise<{
       return {
         type: null,
         service: null,
-        error: `Network error: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}. This might be due to CORS restrictions or the service being unavailable.`,
+        error: `Network error: ${
+          fetchError instanceof Error ? fetchError.message : String(fetchError)
+        }. This might be due to CORS restrictions or the service being unavailable.`,
       };
     }
 

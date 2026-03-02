@@ -51,7 +51,7 @@ export const fetchWithCorsProxy = async (url: string): Promise<Response> => {
     // If CORS proxy fails, try with another proxy
     try {
       const altProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(
-        url
+        url,
       )}`;
       const altProxyResponse = await Promise.race([
         fetch(altProxyUrl),
@@ -86,7 +86,7 @@ export const fetchWithCorsProxy = async (url: string): Promise<Response> => {
     // Try with alternative proxy
     try {
       const altProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(
-        url
+        url,
       )}`;
       const altProxyResponse = await Promise.race([
         fetch(altProxyUrl),
@@ -112,12 +112,12 @@ export const fetchWithCorsProxy = async (url: string): Promise<Response> => {
  */
 export const fetchCapabilities = async (
   serviceUrl: string,
-  serviceType: "WFS" | "WMS"
+  serviceType: "WFS" | "WMS",
 ): Promise<CapabilitiesResult> => {
   // Parse the URL to properly handle existing query parameters
   const url = new URL(serviceUrl);
-  url.searchParams.set('request', 'GetCapabilities');
-  url.searchParams.set('service', serviceType);
+  url.searchParams.set("request", "GetCapabilities");
+  url.searchParams.set("service", serviceType);
   const capabilitiesURL = url.toString();
   const response = await fetchWithCorsProxy(capabilitiesURL);
 
@@ -138,10 +138,13 @@ export const fetchCapabilities = async (
 export const parseWFSCapabilities = (
   xmlDoc: Document,
   text: string,
-  service: Service
+  service: Service,
 ): LayerI[] => {
   // Try both namespaced and non-namespaced element names
-  let featureTypeNodes = xmlDoc.getElementsByTagNameNS("http://www.opengis.net/wfs/2.0", "FeatureType");
+  let featureTypeNodes = xmlDoc.getElementsByTagNameNS(
+    "http://www.opengis.net/wfs/2.0",
+    "FeatureType",
+  );
   if (featureTypeNodes.length === 0) {
     featureTypeNodes = xmlDoc.getElementsByTagName("FeatureType");
   }
@@ -149,40 +152,71 @@ export const parseWFSCapabilities = (
   const layers: LayerI[] = Array.from(featureTypeNodes).map((node) => {
     // Try to get Name with namespace first, then without
     const nameElement =
-      node.getElementsByTagNameNS("http://www.opengis.net/wfs/2.0", "Name")[0] ||
-      node.getElementsByTagName("Name")[0];
+      node.getElementsByTagNameNS(
+        "http://www.opengis.net/wfs/2.0",
+        "Name",
+      )[0] || node.getElementsByTagName("Name")[0];
     const titleElement =
-      node.getElementsByTagNameNS("http://www.opengis.net/wfs/2.0", "Title")[0] ||
-      node.getElementsByTagName("Title")[0];
+      node.getElementsByTagNameNS(
+        "http://www.opengis.net/wfs/2.0",
+        "Title",
+      )[0] || node.getElementsByTagName("Title")[0];
 
     // Extract bounds from WGS84BoundingBox
     let bounds: [number, number, number, number] | undefined;
 
     // Try different namespace versions and tag formats
     const boundingBoxElement =
-      node.getElementsByTagNameNS("http://www.opengis.net/ows/1.1", "WGS84BoundingBox")[0] ||
-      node.getElementsByTagNameNS("http://www.opengis.net/ows", "WGS84BoundingBox")[0] ||
+      node.getElementsByTagNameNS(
+        "http://www.opengis.net/ows/1.1",
+        "WGS84BoundingBox",
+      )[0] ||
+      node.getElementsByTagNameNS(
+        "http://www.opengis.net/ows",
+        "WGS84BoundingBox",
+      )[0] ||
       node.getElementsByTagName("ows:WGS84BoundingBox")[0] ||
       node.getElementsByTagName("WGS84BoundingBox")[0];
 
     if (boundingBoxElement) {
       const lowerCorner =
-        boundingBoxElement.getElementsByTagNameNS("http://www.opengis.net/ows/1.1", "LowerCorner")[0] ||
-        boundingBoxElement.getElementsByTagNameNS("http://www.opengis.net/ows", "LowerCorner")[0] ||
+        boundingBoxElement.getElementsByTagNameNS(
+          "http://www.opengis.net/ows/1.1",
+          "LowerCorner",
+        )[0] ||
+        boundingBoxElement.getElementsByTagNameNS(
+          "http://www.opengis.net/ows",
+          "LowerCorner",
+        )[0] ||
         boundingBoxElement.getElementsByTagName("ows:LowerCorner")[0] ||
         boundingBoxElement.getElementsByTagName("LowerCorner")[0];
 
       const upperCorner =
-        boundingBoxElement.getElementsByTagNameNS("http://www.opengis.net/ows/1.1", "UpperCorner")[0] ||
-        boundingBoxElement.getElementsByTagNameNS("http://www.opengis.net/ows", "UpperCorner")[0] ||
+        boundingBoxElement.getElementsByTagNameNS(
+          "http://www.opengis.net/ows/1.1",
+          "UpperCorner",
+        )[0] ||
+        boundingBoxElement.getElementsByTagNameNS(
+          "http://www.opengis.net/ows",
+          "UpperCorner",
+        )[0] ||
         boundingBoxElement.getElementsByTagName("ows:UpperCorner")[0] ||
         boundingBoxElement.getElementsByTagName("UpperCorner")[0];
 
       if (lowerCorner?.textContent && upperCorner?.textContent) {
-        const [west, south] = lowerCorner.textContent.trim().split(/\s+/).map(Number);
-        const [east, north] = upperCorner.textContent.trim().split(/\s+/).map(Number);
+        const [west, south] = lowerCorner.textContent
+          .trim()
+          .split(/\s+/)
+          .map(Number);
+        const [east, north] = upperCorner.textContent
+          .trim()
+          .split(/\s+/)
+          .map(Number);
         bounds = [west, south, east, north];
-        console.log(`Found WFS bounds for ${titleElement?.textContent || nameElement?.textContent}:`, bounds);
+        console.log(
+          `Found WFS bounds for ${titleElement?.textContent || nameElement?.textContent}:`,
+          bounds,
+        );
       }
     }
 
@@ -194,7 +228,8 @@ export const parseWFSCapabilities = (
       url: service.url,
       textField: service.textField,
       serviceId: service.name,
-      description: node.getElementsByTagName("Abstract")[0]?.textContent || undefined,
+      description:
+        node.getElementsByTagName("Abstract")[0]?.textContent || undefined,
       bounds,
     };
   });
@@ -202,7 +237,7 @@ export const parseWFSCapabilities = (
   // Log if no layers were found
   if (layers.length === 0 && text.length > 0) {
     console.warn(
-      `No layers found for WFS service: ${service.name}. The service may not have any FeatureTypes defined.`
+      `No layers found for WFS service: ${service.name}. The service may not have any FeatureTypes defined.`,
     );
   }
 
@@ -215,7 +250,7 @@ export const parseWFSCapabilities = (
 export const parseWMSCapabilities = (
   xmlDoc: Document,
   text: string,
-  service: Service
+  service: Service,
 ): LayerI[] => {
   const layerNodes = xmlDoc.getElementsByTagName("Layer");
 
@@ -231,7 +266,7 @@ export const parseWMSCapabilities = (
   const createUniqueLayerId = (
     id: string,
     parentId: string = "",
-    depth: number = 0
+    depth: number = 0,
   ): string => {
     // For ESRI services, create a more unique ID by combining parent ID and layer ID
     if (isEsriService) {
@@ -244,15 +279,21 @@ export const parseWMSCapabilities = (
   const processLayerNode = (
     node: Element,
     parentId: string = "",
-    depth: number = 0
+    depth: number = 0,
   ) => {
-    const nameElement = node.getElementsByTagName("Name")[0];
+    let nameElement: Element | null = null;
+    let titleElement: Element | null = null;
+
+    for (let j = 0; j < node.children.length; j++) {
+      const child = node.children[j];
+      const childName = child.localName || child.tagName;
+      if (childName === "Name") nameElement = child;
+      if (childName === "Title") titleElement = child;
+    }
+
     if (!nameElement) return;
 
-    const name =
-      node.getElementsByTagName("Title")[0]?.textContent ||
-      nameElement.textContent ||
-      "";
+    const name = titleElement?.textContent || nameElement.textContent || "";
     const originalId = nameElement.textContent || "";
 
     if (name && originalId) {
@@ -267,16 +308,33 @@ export const parseWMSCapabilities = (
         let bounds: [number, number, number, number] | undefined;
 
         // Try EX_GeographicBoundingBox first (WMS 1.3.0)
-        const geogBBox = node.getElementsByTagName("EX_GeographicBoundingBox")[0];
+        const geogBBox = node.getElementsByTagName(
+          "EX_GeographicBoundingBox",
+        )[0];
         if (geogBBox) {
-          const west = parseFloat(geogBBox.getElementsByTagName("westBoundLongitude")[0]?.textContent || "");
-          const east = parseFloat(geogBBox.getElementsByTagName("eastBoundLongitude")[0]?.textContent || "");
-          const south = parseFloat(geogBBox.getElementsByTagName("southBoundLatitude")[0]?.textContent || "");
-          const north = parseFloat(geogBBox.getElementsByTagName("northBoundLatitude")[0]?.textContent || "");
+          const west = parseFloat(
+            geogBBox.getElementsByTagName("westBoundLongitude")[0]
+              ?.textContent || "",
+          );
+          const east = parseFloat(
+            geogBBox.getElementsByTagName("eastBoundLongitude")[0]
+              ?.textContent || "",
+          );
+          const south = parseFloat(
+            geogBBox.getElementsByTagName("southBoundLatitude")[0]
+              ?.textContent || "",
+          );
+          const north = parseFloat(
+            geogBBox.getElementsByTagName("northBoundLatitude")[0]
+              ?.textContent || "",
+          );
 
           if (!isNaN(west) && !isNaN(east) && !isNaN(south) && !isNaN(north)) {
             bounds = [west, south, east, north];
-            console.log(`Found WMS bounds for ${name} (EX_GeographicBoundingBox):`, bounds);
+            console.log(
+              `Found WMS bounds for ${name} (EX_GeographicBoundingBox):`,
+              bounds,
+            );
           }
         }
 
@@ -291,7 +349,10 @@ export const parseWMSCapabilities = (
 
             if (!isNaN(minx) && !isNaN(miny) && !isNaN(maxx) && !isNaN(maxy)) {
               bounds = [minx, miny, maxx, maxy];
-              console.log(`Found WMS bounds for ${name} (LatLonBoundingBox):`, bounds);
+              console.log(
+                `Found WMS bounds for ${name} (LatLonBoundingBox):`,
+                bounds,
+              );
             }
           }
         }
@@ -305,7 +366,8 @@ export const parseWMSCapabilities = (
           serviceId: service.name,
           // Store the unique ID as a property for React keys
           uniqueId: uniqueId,
-          description: node.getElementsByTagName("Abstract")[0]?.textContent || undefined,
+          description:
+            node.getElementsByTagName("Abstract")[0]?.textContent || undefined,
           bounds,
         } as LayerI);
       }
@@ -325,7 +387,6 @@ export const parseWMSCapabilities = (
 
   // If no layers were found and this is an ESRI service, try alternative approaches
   if (wmsLayers.length === 0 && isEsriService) {
-
     // Try to find layers in ESRI-specific locations
     try {
       // Try different selectors that might work for ESRI services
@@ -363,7 +424,8 @@ export const parseWMSCapabilities = (
                 url: service.url,
                 serviceId: service.name,
                 uniqueId,
-                description: node.querySelector("Abstract")?.textContent || undefined,
+                description:
+                  node.querySelector("Abstract")?.textContent || undefined,
               } as LayerI);
             }
           }
@@ -381,7 +443,6 @@ export const parseWMSCapabilities = (
 
   // If no layers were found but we got a response, create a fallback layer
   if (wmsLayers.length === 0) {
-
     // Extract a layer ID from the URL if possible
     let fallbackId = "";
     if (service.url.includes("MapServer")) {

@@ -1,7 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import { LayerI, Service } from "./LayerTypes";
-import { isArcGISWfsUrl, getFeatureServiceUrl, findLayerIdByName, fetchArcGISLayerMetadata } from "./arcgis";
-import { fetchCapabilities, parseWFSCapabilities, parseWMSCapabilities } from "./capabilities";
+import {
+  isArcGISWfsUrl,
+  getFeatureServiceUrl,
+  findLayerIdByName,
+  fetchArcGISLayerMetadata,
+} from "./arcgis";
+import {
+  fetchCapabilities,
+  parseWFSCapabilities,
+  parseWMSCapabilities,
+} from "./capabilities";
 
 interface ServiceResult {
   layers: LayerI[];
@@ -22,8 +31,14 @@ export function useAllServices(
   errors: Error[];
 } {
   // Filter services by type using useMemo to prevent infinite loop
-  const wfsServices = useMemo(() => services.filter(s => s.type === "WFS"), [services]);
-  const wmsServices = useMemo(() => services.filter(s => s.type === "WMS"), [services]);
+  const wfsServices = useMemo(
+    () => services.filter((s) => s.type === "WFS"),
+    [services, serviceUpdateCounter]
+  );
+  const wmsServices = useMemo(
+    () => services.filter((s) => s.type === "WMS"),
+    [services, serviceUpdateCounter]
+  );
   const [allLayers, setAllLayers] = useState<LayerI[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errors, setErrors] = useState<Error[]>([]);
@@ -55,10 +70,7 @@ export function useAllServices(
       // Create an array of promises for all WMS services
       const servicePromises = wmsServices.map(async (service) => {
         try {
-          const { xmlDoc, text } = await fetchCapabilities(
-            service.url,
-            "WMS"
-          );
+          const { xmlDoc, text } = await fetchCapabilities(service.url, "WMS");
 
           const layers = parseWMSCapabilities(xmlDoc, text, service);
 
@@ -96,10 +108,7 @@ export function useAllServices(
       // Create an array of promises for all WFS services
       const servicePromises = wfsServices.map(async (service) => {
         try {
-          const { xmlDoc, text } = await fetchCapabilities(
-            service.url,
-            "WFS"
-          );
+          const { xmlDoc, text } = await fetchCapabilities(service.url, "WFS");
 
           const layers = parseWFSCapabilities(xmlDoc, text, service);
 
@@ -109,26 +118,41 @@ export function useAllServices(
 
             // Try to match layers to FeatureService layers
             // We do this in parallel for all layers in this service
-            const layersWithStyle = await Promise.all(layers.map(async (layer) => {
-              try {
-                // Find the corresponding layer ID in the Feature Service
-                const layerId = await findLayerIdByName(featureServiceUrl, layer.name);
+            const layersWithStyle = await Promise.all(
+              layers.map(async (layer) => {
+                try {
+                  // Find the corresponding layer ID in the Feature Service
+                  const layerId = await findLayerIdByName(
+                    featureServiceUrl,
+                    layer.name
+                  );
 
-                if (layerId) {
-                  const metadata = await fetchArcGISLayerMetadata(featureServiceUrl, layerId);
+                  if (layerId) {
+                    const metadata = await fetchArcGISLayerMetadata(
+                      featureServiceUrl,
+                      layerId
+                    );
 
-                  if (metadata && metadata.drawingInfo && metadata.drawingInfo.renderer) {
-                    return {
-                      ...layer,
-                      styleInfo: metadata.drawingInfo.renderer
-                    };
+                    if (
+                      metadata &&
+                      metadata.drawingInfo &&
+                      metadata.drawingInfo.renderer
+                    ) {
+                      return {
+                        ...layer,
+                        styleInfo: metadata.drawingInfo.renderer,
+                      };
+                    }
                   }
+                } catch (styleError) {
+                  console.warn(
+                    `Failed to fetch style for layer ${layer.name}:`,
+                    styleError
+                  );
                 }
-              } catch (styleError) {
-                console.warn(`Failed to fetch style for layer ${layer.name}:`, styleError);
-              }
-              return layer;
-            }));
+                return layer;
+              })
+            );
 
             return {
               layers: layersWithStyle,
