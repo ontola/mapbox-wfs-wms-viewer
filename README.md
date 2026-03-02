@@ -16,11 +16,15 @@ Open source web application to view WFS and WMS (GIS) layers. Built on React & M
 
 The map viewer can be controlled via URL search parameters. This allows you to construct and share specific views.
 
-- `service` (string): URL to a WFS or WMS service. The app will automatically discover and load the first layer from this service.
-- `layers` (string): A base64-encoded JSON array of layer objects.
-- `lat` (number): Latitude of the map center (e.g., `52.0000`).
-- `lng` (number): Longitude of the map center (e.g., `5.0000`).
-- `zoom` (number): Zoom level of the map (e.g., `7.50`).
+- `service`: A URL for a WFS or WMS service to automatically load (e.g., `https://example.com/wms`). The app will detect the type and add it to the available layers list.
+- `layers`: A Base64-encoded JSON array of layer objects. This defines which layers are visible and their configuration. This parameter is automatically updated in the URL as you select/deselect layers.
+- `color`: CSS color string for the primary accent color (e.g., `#1a5a96`, `red`, `rgb(26,90,150)`). Remember to URL encode the `#` as `%23`.
+- `name`: Sets the document title and the header text of the layers sidebar (e.g., `Utrecht`).
+- `logo`: A URL to an image to prominently display in the layers sidebar header.
+- `favicon`: A URL to an image to replace the document's favicon icon.
+- `lat`: Latitude of the map center (e.g., `52.0000`).
+- `lng`: Longitude of the map center (e.g., `5.0000`).
+- `zoom`: The zoom level of the map (e.g., `8.02`).
 
 ### Example: Setting Map View
 

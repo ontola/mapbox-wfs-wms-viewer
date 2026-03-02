@@ -8,7 +8,7 @@ import { Map } from "./Map";
 import { MapProvider } from "react-map-gl";
 import { LayerI } from "./layers/LayerTypes";
 import { LayerSelector } from "./Layers";
-import { getLayersFromUrl, setLayersInUrl, getServiceUrlFromUrl } from "./urlState";
+import { getLayersFromUrl, setLayersInUrl, getServiceUrlFromUrl, getThemeFromUrl, Theme } from "./urlState";
 import { detectServiceType } from "./layers/detectService";
 
 type InteractionOrigin = "mapMove" | "mapClick" | "query" | "filter" | undefined;
@@ -21,6 +21,7 @@ export interface AppContextI {
   /** Where the user had its last interaction */
   lastInteractionOrigin: InteractionOrigin;
   setLastInteractionOrigin: (origin: InteractionOrigin) => void;
+  theme?: Theme;
 }
 
 export const AppContext = createContext<AppContextI>(undefined);
@@ -35,16 +36,40 @@ const AppProvider = () => {
 
 const App = () => {
   const [lastInteractionOrigin, setLastInteractionOrigin] =
-    React.useState(undefined);
+    React.useState<InteractionOrigin>(undefined);
   const [layers, setLayers] = React.useState<LayerI[]>([]);
   const [showLayerSelector, setShowLayerSelector] = React.useState(false);
+  const [theme, setTheme] = React.useState<Theme | undefined>();
 
-  // Initialize layers from URL on mount
+  // Initialize layers and theme from URL on mount
   useEffect(() => {
     const urlLayers = getLayersFromUrl();
     if (urlLayers.length > 0) {
       // Directly set layers from URL - they have all the info needed
       setLayers(urlLayers);
+    }
+
+    // Check for theme parameters
+    const urlTheme = getThemeFromUrl();
+    if (Object.keys(urlTheme).length > 0) {
+      setTheme(urlTheme);
+
+      // Apply theme to document
+      if (urlTheme.color) {
+        document.documentElement.style.setProperty('--primary-color', urlTheme.color);
+      }
+      if (urlTheme.name) {
+        document.title = urlTheme.name;
+      }
+      if (urlTheme.favicon) {
+        let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          document.head.appendChild(link);
+        }
+        link.href = urlTheme.favicon;
+      }
     }
   }, []);
 
@@ -70,6 +95,7 @@ const App = () => {
         setShowLayerSelector,
         lastInteractionOrigin,
         setLastInteractionOrigin,
+        theme,
       }}
     >
       <MapProvider>

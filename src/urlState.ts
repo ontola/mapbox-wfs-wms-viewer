@@ -14,7 +14,7 @@ export interface MapView {
  * Encode layers to URL-safe format
  */
 function encodeLayers(layers: LayerI[]): string {
-  const layerData = layers.map(layer => ({
+  const layerData = layers.map((layer) => ({
     id: layer.id,
     name: layer.name,
     url: layer.url,
@@ -37,7 +37,7 @@ function decodeLayers(encoded: string): LayerI[] {
       visible: true, // Layers from URL should be visible
     }));
   } catch (e) {
-    console.error('Failed to decode layers from URL:', e);
+    console.error("Failed to decode layers from URL:", e);
     return [];
   }
 }
@@ -47,7 +47,7 @@ function decodeLayers(encoded: string): LayerI[] {
  */
 export function getLayersFromUrl(): LayerI[] {
   const params = new URLSearchParams(window.location.search);
-  const layersParam = params.get('layers');
+  const layersParam = params.get("layers");
   return layersParam ? decodeLayers(layersParam) : [];
 }
 
@@ -58,13 +58,13 @@ export function setLayersInUrl(layers: LayerI[]): void {
   const params = new URLSearchParams(window.location.search);
 
   if (layers.length > 0) {
-    params.set('layers', encodeLayers(layers));
+    params.set("layers", encodeLayers(layers));
   } else {
-    params.delete('layers');
+    params.delete("layers");
   }
 
-  const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
-  window.history.replaceState({}, '', newUrl);
+  const newUrl = `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}`;
+  window.history.replaceState({}, "", newUrl);
 }
 
 /**
@@ -72,9 +72,9 @@ export function setLayersInUrl(layers: LayerI[]): void {
  */
 export function getMapViewFromUrl(): MapView | null {
   const params = new URLSearchParams(window.location.search);
-  const lat = params.get('lat');
-  const lng = params.get('lng');
-  const zoom = params.get('zoom');
+  const lat = params.get("lat");
+  const lng = params.get("lng");
+  const zoom = params.get("zoom");
 
   if (lat && lng && zoom) {
     return {
@@ -90,15 +90,19 @@ export function getMapViewFromUrl(): MapView | null {
 /**
  * Update URL with map view
  */
-export function setMapViewInUrl(latitude: number, longitude: number, zoom: number): void {
+export function setMapViewInUrl(
+  latitude: number,
+  longitude: number,
+  zoom: number,
+): void {
   const params = new URLSearchParams(window.location.search);
 
-  params.set('lat', latitude.toFixed(4));
-  params.set('lng', longitude.toFixed(4));
-  params.set('zoom', zoom.toFixed(2));
+  params.set("lat", latitude.toFixed(4));
+  params.set("lng", longitude.toFixed(4));
+  params.set("zoom", zoom.toFixed(2));
 
   const newUrl = `${window.location.pathname}?${params.toString()}`;
-  window.history.replaceState({}, '', newUrl);
+  window.history.replaceState({}, "", newUrl);
 }
 
 /**
@@ -107,5 +111,37 @@ export function setMapViewInUrl(latitude: number, longitude: number, zoom: numbe
  */
 export function getServiceUrlFromUrl(): string | null {
   const params = new URLSearchParams(window.location.search);
-  return params.get('service');
+  return params.get("service");
+}
+
+/**
+ * Theme configuration for customizing the UI
+ */
+export interface Theme {
+  color?: string;
+  name?: string;
+  logo?: string;
+  favicon?: string;
+}
+
+/**
+ * Get theme parameters from URL
+ */
+export function getThemeFromUrl(): Theme {
+  const params = new URLSearchParams(window.location.search);
+  const theme: Theme = {};
+
+  const color = params.get("color");
+  if (color) theme.color = color;
+
+  const name = params.get("name");
+  if (name) theme.name = name;
+
+  const logo = params.get("logo");
+  if (logo) theme.logo = logo;
+
+  const favicon = params.get("favicon");
+  if (favicon) theme.favicon = favicon;
+
+  return theme;
 }

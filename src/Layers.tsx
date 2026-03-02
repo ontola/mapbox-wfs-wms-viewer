@@ -25,6 +25,7 @@ export function LayerSelector() {
     setShowLayerSelector,
     layers,
     setLayers,
+    theme,
   } = useContext(AppContext);
 
   // All useState hooks must be called before any conditional logic
@@ -300,7 +301,8 @@ export function LayerSelector() {
   return (
     <div className={`Sidebar filter-panel ${showLayerSelector ? "filter-panel--open" : ""}`}>
       <div className="Titlebar">
-        <h3>Lagen</h3>
+        {theme?.logo && <img src={theme.logo} alt="Logo" className="theme-logo" />}
+        <h3>{theme?.name || "Lagen"}</h3>
         <button title="Lagen sluiten" onClick={() => setShowLayerSelector(false)}>
           <Cross1Icon />
         </button>
