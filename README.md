@@ -1,12 +1,12 @@
 # Mapbox WFS WMS viewer
 
-Open source web application to view WFS and WMS (GIS) layers. Built on React & MapBoxGL.
+Open source web application to view WFS, WMS (GIS) and JSON layers. Built on React & MapBoxGL.
 
 ## Features
 
 - **Sharable state**: Encodes selected layers and map position in URL
 - **High performance (GPU rendering)**: Uses MapboxGL for fast vector tile rendering
-- **Layer discovery**: Add a WFS or WMS service URL to automatically discover layers
+- **Layer discovery**: Add a WFS, WMS, or JSON service URL to automatically discover layers
 - **Vector layers**: WFS layers are rendered as vector tiles (shapes, points, lines), shows more info on hover
 - **Raster layers**: WMS layers are rendered as raster tiles (images)
 - **Auto Navigation**: Opening a link or layer moves to that location
@@ -16,7 +16,7 @@ Open source web application to view WFS and WMS (GIS) layers. Built on React & M
 
 The map viewer can be controlled via URL search parameters. This allows you to construct and share specific views.
 
-- `service`: A URL for a WFS or WMS service to automatically load (e.g., `https://example.com/wms`). The app will detect the type and add it to the available layers list.
+- `service`: A URL for a WFS, WMS, or JSON service to automatically load (e.g., `https://example.com/wms`). The app will detect the type and add it to the available layers list.
 - `layers`: A Base64-encoded JSON array of layer objects. This defines which layers are visible and their configuration. This parameter is automatically updated in the URL as you select/deselect layers.
 - `color`: CSS color string for the primary accent color (e.g., `#1a5a96`, `red`, `rgb(26,90,150)`). Remember to URL encode the `#` as `%23`.
 - `name`: Sets the document title and the header text of the layers sidebar (e.g., `Utrecht`).
@@ -42,7 +42,7 @@ const layers = [
     id: "layer-1",
     name: "My WFS Layer",
     url: "https://example.com/wfs",
-    type: "wfs", // "wfs" | "wms"
+    type: "wfs", // "wfs" | "wms" | "json"
     serviceId: "service-1",
     textField: "name" // Optional property for rendering labels
   }

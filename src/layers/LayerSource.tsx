@@ -21,29 +21,34 @@ export function LayerSource({ layer, bounds = boundsNL }: LayerSourceProps) {
   // For GeoJSON sources from ArcGIS, fetch and transform from EPSG:28992
   useEffect(() => {
     if (layer.type !== "raster") {
-      const wfsUrl = makeWfsUrl(layer, effectiveBounds);
-      const isArcGIS = layer.url?.includes('arcgis');
+      // Check if it's a direct JSON file layer
+      const isJsonLayer = layer.uniqueId?.startsWith('json-');
+      const wfsUrl = isJsonLayer && layer.url ? layer.url : makeWfsUrl(layer, effectiveBounds);
+      const isArcGIS = layer.url?.includes("arcgis");
 
-      console.log(`📡 Fetching WFS data for ${layer.name} from ${wfsUrl}`);
+      console.log(`📡 Fetching data for ${layer.name} from ${wfsUrl}`);
 
       fetch(wfsUrl)
-        .then(response => response.json())
-        .then(data => {
+        .then((response) => response.json())
+        .then((data) => {
           // Check if this is RD data that needs transformation
           const crsName = data.crs?.properties?.name;
-          const isRD = crsName?.includes('28992') || crsName?.includes('EPSG::28992');
+          const isRD =
+            crsName?.includes("28992") || crsName?.includes("EPSG::28992");
 
           if (isArcGIS && isRD) {
-            console.log(`🔄 Layer ${layer.name} is in EPSG:28992, transforming...`);
+            console.log(
+              `🔄 Layer ${layer.name} is in EPSG:28992, transforming...`,
+            );
             const transformed = transformGeoJSONFromRD(data);
             setGeojsonData(transformed);
           } else {
-            console.log(`✅ Layer ${layer.name} is already in WGS84`);
+            console.log(`✅ Layer ${layer.name} is ready`);
             setGeojsonData(data);
           }
         })
-        .catch(error => {
-          console.error(`❌ Error fetching WFS data for ${layer.name}:`, error);
+        .catch((error) => {
+          console.error(`❌ Error fetching data for ${layer.name}:`, error);
         });
     }
   }, [layer, effectiveBounds]);
@@ -57,7 +62,7 @@ export function LayerSource({ layer, bounds = boundsNL }: LayerSourceProps) {
         tiles={[makeWmsUrl(layer)]}
         scheme="xyz"
       >
-        {mapBoxLayers.map(mapBoxLayer => (
+        {mapBoxLayers.map((mapBoxLayer) => (
           <Layer {...mapBoxLayer} key={mapBoxLayer.id} />
         ))}
       </Source>
@@ -71,7 +76,7 @@ export function LayerSource({ layer, bounds = boundsNL }: LayerSourceProps) {
 
   return (
     <Source id={layer.id} type="geojson" data={geojsonData}>
-      {mapBoxLayers.map(mapBoxLayer => (
+      {mapBoxLayers.map((mapBoxLayer) => (
         <Layer {...mapBoxLayer} key={mapBoxLayer.id} />
       ))}
     </Source>

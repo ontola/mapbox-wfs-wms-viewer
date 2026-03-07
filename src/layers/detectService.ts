@@ -7,7 +7,7 @@ import { fetchCapabilities } from "./capabilities";
  * @returns An object with the detected service type and a service object
  */
 export async function detectServiceType(url: string): Promise<{
-  type: "WFS" | "WMS" | null;
+  type: "WFS" | "WMS" | "JSON" | null;
   service: Service | null;
   error?: string;
 }> {
@@ -15,6 +15,35 @@ export async function detectServiceType(url: string): Promise<{
   const baseUrl = url.split("?")[0];
 
   try {
+    // Check if it's a JSON file
+    if (url.toLowerCase().endsWith(".json") || url.includes("outputFormat=application/json") || url.includes("f=json")) {
+      try {
+        const response = await fetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          // Extract a meaningful name from the URL path
+          const urlParts = baseUrl.split("/");
+          let title = urlParts.pop() || "JSON Data";
+          
+          if (title.endsWith('.json')) {
+            title = title.substring(0, title.length - 5);
+          }
+          
+          return {
+            type: "JSON",
+            service: {
+              name: title,
+              url: url, // Use the full URL for JSON to preserve parameters
+              description: `JSON data from: ${url}`,
+              type: "JSON",
+            },
+          };
+        }
+      } catch (e) {
+        console.error("Error fetching JSON:", e);
+      }
+    }
+
     // First try WFS
     try {
       const { xmlDoc, text } = await fetchCapabilities(baseUrl, "WFS");

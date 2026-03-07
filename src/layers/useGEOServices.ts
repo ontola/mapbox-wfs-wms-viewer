@@ -11,6 +11,7 @@ import {
   parseWFSCapabilities,
   parseWMSCapabilities,
 } from "./capabilities";
+import bbox from "@turf/bbox";
 
 interface ServiceResult {
   layers: LayerI[];
@@ -39,6 +40,11 @@ export function useAllServices(
     () => services.filter((s) => s.type === "WMS"),
     [services, serviceUpdateCounter]
   );
+  const jsonServices = useMemo(
+    () => services.filter((s) => s.type === "JSON"),
+    [services, serviceUpdateCounter]
+  );
+  
   const [allLayers, setAllLayers] = useState<LayerI[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errors, setErrors] = useState<Error[]>([]);
@@ -46,6 +52,7 @@ export function useAllServices(
   // Use refs to store service data
   const [wfsResults, setWfsResults] = useState<ServiceResult[]>([]);
   const [wmsResults, setWmsResults] = useState<ServiceResult[]>([]);
+  const [jsonResults, setJsonResults] = useState<ServiceResult[]>([]);
 
   // Fetch both WFS and WMS services in parallel
   useEffect(() => {
@@ -54,9 +61,65 @@ export function useAllServices(
       // Start WMS services first as they typically take longer
       const wmsPromise = fetchWmsServices();
       const wfsPromise = fetchWfsServices();
+      const jsonPromise = fetchJsonServices();
 
       // Wait for both to complete
-      await Promise.all([wmsPromise, wfsPromise]);
+      await Promise.all([wmsPromise, wfsPromise, jsonPromise]);
+    };
+
+    // Function to fetch JSON services
+    const fetchJsonServices = async () => {
+      if (jsonServices.length === 0) {
+        setJsonResults([]);
+        return;
+      }
+      
+      const servicePromises = jsonServices.map(async (service) => {
+        try {
+          // Fetch the JSON to get its bounds
+          const response = await fetch(service.url);
+          const data = await response.json();
+          let layerBounds: [number, number, number, number] | undefined;
+          
+          try {
+            if (data.type === 'FeatureCollection' || data.type === 'Feature') {
+              const calculatedBbox = bbox(data);
+              layerBounds = [calculatedBbox[0], calculatedBbox[1], calculatedBbox[2], calculatedBbox[3]];
+            }
+          } catch (e) {
+            console.warn("Could not calculate bounds for JSON:", e);
+          }
+
+          // For JSON, we just create a single layer that points to the JSON file
+          const layer: LayerI = {
+            id: service.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase(),
+            name: service.name,
+            type: "vector", // Default to vector, will be handled by LayerSource
+            visible: true,
+            url: service.url,
+            serviceId: service.name,
+            uniqueId: `json-${service.url}`,
+            description: service.description,
+            bounds: layerBounds
+          };
+
+          return {
+            layers: [layer],
+            loading: false,
+            error: null,
+          };
+        } catch (err) {
+          console.error("Error processing JSON service:", err);
+          return {
+            layers: [],
+            loading: false,
+            error: err instanceof Error ? err : new Error("Failed to process JSON service"),
+          };
+        }
+      });
+
+      const serviceResults = await Promise.all(servicePromises);
+      setJsonResults(serviceResults);
     };
 
     // Function to fetch WMS services
@@ -192,12 +255,14 @@ export function useAllServices(
     const allErrors: Error[] = [
       ...wfsResults.filter((r) => r.error).map((r) => r.error!),
       ...wmsResults.filter((r) => r.error).map((r) => r.error!),
+      ...jsonResults.filter((r) => r.error).map((r) => r.error!),
     ];
 
     setErrors(allErrors);
 
     const wfsLayers = wfsResults.flatMap((result) => result.layers);
     const wmsLayers = wmsResults.flatMap((result) => result.layers);
+    const jsonLayers = jsonResults.flatMap((result) => result.layers);
 
     // Check for duplicate layers and create a unique set
     const uniqueLayers: LayerI[] = [];
@@ -235,6 +300,23 @@ export function useAllServices(
         uniqueLayers.push(layer);
       }
     });
+    
+    jsonLayers.forEach((layer) => {
+      // Use uniqueId if available, otherwise create a composite ID
+      const uniqueId =
+        (layer as any).uniqueId ||
+        `${layer.serviceId || "noservice"}-${layer.url || "nourl"}-${layer.id}`;
+
+      if (seenIds.has(uniqueId)) {
+        console.log(
+          `Skipping duplicate JSON layer: ${layer.id} from service ${layer.serviceId}`
+        );
+      } else {
+        seenIds.add(uniqueId);
+        uniqueLayers.push(layer);
+      }
+    });
+    
     setAllLayers(uniqueLayers);
 
     // Only set isLoading to false when we have results for both WFS and WMS services
@@ -243,9 +325,11 @@ export function useAllServices(
       wfsServices.length > 0 ? wfsResults.length === wfsServices.length : true;
     const wmsLoaded =
       wmsServices.length > 0 ? wmsResults.length === wmsServices.length : true;
+    const jsonLoaded =
+      jsonServices.length > 0 ? jsonResults.length === jsonServices.length : true;
 
-    setIsLoading(!(wfsLoaded && wmsLoaded));
-  }, [wfsResults, wmsResults, wfsServices, wmsServices]);
+    setIsLoading(!(wfsLoaded && wmsLoaded && jsonLoaded));
+  }, [wfsResults, wmsResults, jsonResults, wfsServices, wmsServices, jsonServices]);
 
   return { allLayers, isLoading, errors };
 }

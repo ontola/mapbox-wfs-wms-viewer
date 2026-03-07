@@ -118,7 +118,7 @@ export interface WFSCapabilities {
   };
 }
 
-export type ServiceType = "WFS" | "WMS";
+export type ServiceType = "WFS" | "WMS" | "JSON";
 
 export interface Service {
   /** Show to the user */
