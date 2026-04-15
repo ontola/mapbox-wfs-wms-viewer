@@ -1,5 +1,11 @@
 import { LayerI, Service } from "./LayerTypes";
 
+function humanizeLayerName(name: string): string {
+  let clean = name.replace(/^[A-Z]{2,}_/, "");
+  clean = clean.replace(/_/g, " ").toLowerCase();
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+}
+
 // Timeout for service requests in milliseconds (30 seconds)
 const SERVICE_REQUEST_TIMEOUT = 30000;
 
@@ -221,7 +227,7 @@ export const parseWFSCapabilities = (
     }
 
     return {
-      name: titleElement?.textContent || nameElement?.textContent || "",
+      name: humanizeLayerName(titleElement?.textContent || nameElement?.textContent || ""),
       id: nameElement?.textContent || "",
       visible: false,
       type: "vector" as const,

@@ -1,7 +1,10 @@
 import { AnyLayer, SymbolLayer, RasterLayer } from "react-map-gl";
 import { LayerI } from "./LayerTypes";
-import { stringToColor } from "./utils";
 import { bagLayerId } from "./LayerTypes";
+
+function getThemeColor(): string {
+  return getComputedStyle(document.documentElement).getPropertyValue("--primary-color").trim() || "rgb(204, 0, 0)";
+}
 
 /**
  * We try to find the best way to make MapBox render a layer.
@@ -14,8 +17,7 @@ import { bagLayerId } from "./LayerTypes";
  */
 export function makeMapBoxLayer(layer: LayerI): AnyLayer[] {
   if (layer.type === "vector") {
-    // Default style
-    let fillColor: any = stringToColor(layer.id);
+    let fillColor: any = getThemeColor();
     let strokeColor: any = "#000000";
 
     // Apply ArcGIS style if available
@@ -56,8 +58,7 @@ export function makeMapBoxLayer(layer: LayerI): AnyLayer[] {
           }
         });
 
-        // Default color
-        matchExpression.push(stringToColor(layer.id));
+        matchExpression.push(getThemeColor());
 
         fillColor = matchExpression;
       } else if (layer.styleInfo.type === "simple" && layer.styleInfo.symbol) {
