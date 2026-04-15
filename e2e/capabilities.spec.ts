@@ -303,4 +303,133 @@ test.describe("Capabilities Abstraction", () => {
     // Ensure the failed service is not listed in the sidebar
     await expect(page.locator("text=Mock Service")).not.toBeVisible();
   });
+
+  test("should detect and load JSON service from URL", async ({ page }) => {
+    const serviceUrl = "https://mock.service/data.geojson";
+    const mockGeoJson = {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: { name: "Test Point" },
+          geometry: { type: "Point", coordinates: [5.0, 52.0] },
+        },
+      ],
+    };
+
+    // Intercept JSON request
+    await page.route(serviceUrl, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/geo+json",
+        body: JSON.stringify(mockGeoJson),
+      });
+    });
+
+    // Navigate to the app
+    await page.goto(`/?service=${encodeURIComponent(serviceUrl)}`);
+
+    // Wait for layer selector
+    await page.waitForSelector('[data-testid="layer-selector"]');
+
+    // Check if the service is listed (filename "data" is extracted from URL)
+    await expect(page.locator("text=data").first()).toBeVisible();
+
+    // The layer itself should also be named "data" for direct JSON files
+    await expect(page.locator("text=data").last()).toBeVisible();
+  });
+
+  test("should detect and load ArcGIS FeatureServer from URL", async ({
+    page,
+  }) => {
+    const serviceUrl =
+      "https://mock.service/arcgis/rest/services/TestService/FeatureServer";
+
+    const mockArcGisMetadata = {
+      name: "Test ArcGIS Service",
+      serviceDescription: "Description of test service",
+      layers: [
+        {
+          id: 0,
+          name: "Test ArcGIS Layer",
+          parentLayerId: -1,
+          defaultVisibility: true,
+        },
+      ],
+    };
+
+    // Intercept ArcGIS metadata request
+    await page.route(`${serviceUrl}?f=json`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mockArcGisMetadata),
+      });
+    });
+
+    // Navigate to the app
+    await page.goto(`/?service=${encodeURIComponent(serviceUrl)}`);
+
+    // Wait for layer selector
+    await page.waitForSelector('[data-testid="layer-selector"]');
+
+    // Check if the service is listed (ArcGIS logic extracts service name from URL)
+    await expect(page.locator("text=TestService").first()).toBeVisible();
+
+    // Expand the group
+    await page.click("text=TestService");
+
+    // Check if the layer is visible
+    await expect(page.locator("text=Test ArcGIS Layer")).toBeVisible();
+  });
+
+  test("should detect and load CSV service from URL", async ({ page }) => {
+    const serviceUrl = "https://mock.service/data.csv";
+    const mockCsv = "name,latitude,longitude\nTest Point,52.0,5.0";
+
+    // Intercept CSV request
+    await page.route(serviceUrl, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/csv",
+        body: mockCsv,
+      });
+    });
+
+    // Navigate to the app
+    await page.goto(`/?service=${encodeURIComponent(serviceUrl)}`);
+
+    // Wait for layer selector
+    await page.waitForSelector('[data-testid="layer-selector"]');
+
+    // Check if the service is listed
+    await expect(page.locator("text=data").first()).toBeVisible();
+
+    // Check if the layer is visible
+    await expect(page.locator("text=data").last()).toBeVisible();
+  });
+
+  test("should detect and load RD CSV service from URL", async ({ page }) => {
+    const serviceUrl = "https://mock.service/rd-data.csv";
+    // Utrecht Dom Tower coordinates in RD
+    const mockCsv = "name,rd_x,rd_y\nDom Tower,136800,455800";
+
+    // Intercept CSV request
+    await page.route(serviceUrl, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/csv",
+        body: mockCsv,
+      });
+    });
+
+    // Navigate to the app
+    await page.goto(`/?service=${encodeURIComponent(serviceUrl)}`);
+
+    // Wait for layer selector
+    await page.waitForSelector('[data-testid="layer-selector"]');
+
+    // Check if the service is listed
+    await expect(page.locator("text=rd-data").first()).toBeVisible();
+  });
 });

@@ -104,12 +104,13 @@ test.describe("Map Viewer", () => {
     if (box) {
       await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
       await page.mouse.down();
-      // Use steps to simulate a real drag, Mapbox prefers this over instant jumps
+      // Use steps to simulate a real drag
       await page.mouse.move(
-        box.x + box.width / 2 + 150,
-        box.y + box.height / 2 + 150,
-        { steps: 10 },
+        box.x + box.width / 2 + 500,
+        box.y + box.height / 2 + 500,
+        { steps: 20 },
       );
+      await page.waitForTimeout(1000); // Wait while mouse is down
       await page.mouse.up();
     }
 
