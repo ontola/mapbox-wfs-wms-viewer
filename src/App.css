@@ -25,8 +25,20 @@ body {
   border-bottom: 1px solid #e6e6e6;
 }
 
-.Titlebar h3 {
+.Titlebar__title {
   margin-right: auto;
+}
+
+.Titlebar__title h3 {
+  margin: 0;
+}
+
+.Titlebar__service-type {
+  font-size: 10px;
+  font-weight: 600;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .results-panel {

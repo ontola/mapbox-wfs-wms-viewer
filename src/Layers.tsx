@@ -270,7 +270,14 @@ export function LayerSelector() {
         {theme?.logo && (
           <img src={theme.logo} alt="Logo" className="theme-logo" />
         )}
-        <h3>{theme?.name || "Lagen"}</h3>
+        <div className="Titlebar__title">
+          <h3>{theme?.name || "Lagen"}</h3>
+          {services.length > 0 && (
+            <span className="Titlebar__service-type">
+              {services[0].type === "ArcGIS_FeatureServer" ? "ArcGIS" : services[0].type}
+            </span>
+          )}
+        </div>
         <div className="Titlebar__actions">
           <button
             title="Developer tools"

@@ -16,12 +16,16 @@ export async function detectServiceType(url: string): Promise<{
 
   try {
     // 1. Check if it's explicitly a JSON/GeoJSON resource based on the URL
+    //    But NOT if it's a WFS GetFeature request (those should go through WFS detection with bbox)
+    const isWfsGetFeature = url.includes("request=GetFeature") || url.includes("REQUEST=GetFeature") || url.includes("service=WFS") || url.includes("SERVICE=WFS");
     if (
-      url.toLowerCase().endsWith(".json") || 
-      url.toLowerCase().endsWith(".geojson") || 
-      url.includes("outputFormat=application/json") || 
-      url.includes("f=json") || 
-      url.includes("f=geojson")
+      !isWfsGetFeature && (
+        url.toLowerCase().endsWith(".json") ||
+        url.toLowerCase().endsWith(".geojson") ||
+        url.includes("outputFormat=application/json") ||
+        url.includes("f=json") ||
+        url.includes("f=geojson")
+      )
     ) {
       try {
         const response = await fetch(url);

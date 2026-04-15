@@ -205,6 +205,13 @@ export function Map() {
     prevVisibleLayersRef.current = currentVisibleLayersMap;
   }, [visibleLayers]);
 
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (map) {
+      setTimeout(() => map.resize(), 0);
+    }
+  }, [showLayerSelector]);
+
   // Draw a polygon on the map and calculate the surface area
   useEffect(() => {
     const map = mapRef.current?.getMap();

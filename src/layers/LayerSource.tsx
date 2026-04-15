@@ -134,7 +134,10 @@ export function LayerSource({ layer, bounds = boundsNL, onLoadingChange }: Layer
         }
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      notifyLoading(false);
+    };
   }, [layerId, layerUrl]);
 
   if (layer.type === "raster") {
