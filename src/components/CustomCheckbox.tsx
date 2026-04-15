@@ -25,7 +25,7 @@ export function CustomCheckbox({ checked, onChange, label, count, description, c
     <div
       className={`custom-checkbox-container ${className}`}
       onClick={handleClick}
-      role="checkbox"
+      role="radio"
       aria-checked={checked}
       {...rest}
     >

@@ -1,56 +1,61 @@
-import { useState } from "react";
 import "./DemoUrls.css";
 
-const DEMO_URLS = [
+const DEMOS = [
   {
-    name: "Utrecht Begroeidterreindeel (JSON)",
-    url: "https://geodata.utrecht.nl/geoserver/UtrechtOpen/wfs?request=GetFeature&typeName=UtrechtOpen:BGT_BEGROEIDTERREINDEEL_SWC&outputFormat=application/json"
+    name: "Nijmegen",
+    type: "WMS",
+    service: "https://services.nijmegen.nl/geoservices/extern_Cultuurhistorie/ows?request=getCapabilities&service=WMS",
+    color: "#1a5a96",
+    logo: "https://en.intonijmegen.com/build/assets/logo.986ea2a747c1189bb935.svg",
+    favicon: "https://en.intonijmegen.com/build/assets/favicon.31fd6d719b8b50a9b1b4.ico",
   },
   {
-    name: "Utrecht Strooiroutes (ArcGIS)",
-    url: "https://services-eu1.arcgis.com/SMnoOtmU2UWf0vRp/arcgis/rest/services/_171206_strooiroutes/FeatureServer"
+    name: "Nijmegen Bushaltes",
+    type: "WFS",
+    service: "https://services.nijmegen.nl/geoservices/extern_Mobiliteit/ows?request=getCapabilities&service=WFS",
+    color: "#1a5a96",
   },
   {
-    name: "Nijmegen Bushaltes (WFS)",
-    url: "https://services.nijmegen.nl/geoservices/extern_Mobiliteit/ows?request=getCapabilities&service=WFS"
+    name: "Utrecht Groen",
+    type: "JSON",
+    service: "https://geodata.utrecht.nl/geoserver/UtrechtOpen/wfs?request=GetFeature&typeName=UtrechtOpen:BGT_BEGROEIDTERREINDEEL_SWC&outputFormat=application/json",
+    color: "#cc0000",
   },
   {
-    name: "Groningen Speelplekken (JSON)",
-    url: "https://maps.groningen.nl/geoserver/geo-data/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=geo-data:Speelplekken_gemeente_Groningen&maxFeatures=1000000&outputFormat=application/json&srsName=EPSG:4326&format_options=id_policy:reference_no=false"
-  }
+    name: "Utrecht Strooiroutes",
+    type: "ArcGIS",
+    service: "https://services-eu1.arcgis.com/SMnoOtmU2UWf0vRp/arcgis/rest/services/_171206_strooiroutes/FeatureServer",
+    color: "#cc0000",
+  },
 ];
 
-interface DemoUrlsProps {
-  onSelectUrl: (url: string) => void;
+function buildDemoUrl(demo: typeof DEMOS[number]): string {
+  const url = new URL(window.location.origin);
+  url.searchParams.set("service", demo.service);
+  url.searchParams.set("name", demo.name);
+  if (demo.color) url.searchParams.set("color", demo.color);
+  if (demo.logo) url.searchParams.set("logo", demo.logo);
+  if (demo.favicon) url.searchParams.set("favicon", demo.favicon);
+  return url.toString();
 }
 
-export function DemoUrls({ onSelectUrl }: DemoUrlsProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
+export function DemoUrls() {
   return (
     <div className="demo-urls-container">
-      <button 
-        className="demo-urls-toggle" 
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        {isOpen ? "▼ Verberg test URLs" : "▶ Toon test URLs"}
-      </button>
-      
-      {isOpen && (
-        <ul className="demo-urls-list">
-          {DEMO_URLS.map((demo, i) => (
-            <li key={i}>
-              <button 
-                className="demo-url-button"
-                onClick={() => onSelectUrl(demo.url)}
-                title={demo.url}
-              >
-                {demo.name}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <h4>Test URLs</h4>
+      <ul className="demo-urls-list">
+        {DEMOS.map((demo, i) => (
+          <li key={i}>
+            <a
+              className="demo-url-button"
+              href={buildDemoUrl(demo)}
+            >
+              <span className="demo-url-type">{demo.type}</span>
+              {demo.name}
+            </a>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

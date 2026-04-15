@@ -192,7 +192,7 @@ export function Map() {
             ],
             {
               padding: 20,
-              duration: 0,
+              duration: animationDuration,
             },
           );
         } catch (err) {

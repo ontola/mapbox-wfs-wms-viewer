@@ -1,10 +1,8 @@
 import {
   Cross1Icon,
   MagnifyingGlassIcon,
-  EyeOpenIcon,
-  EyeClosedIcon,
   PlusIcon,
-  InfoCircledIcon,
+  GearIcon,
 } from "@radix-ui/react-icons";
 import { useContext, useEffect, useMemo, useState, useRef } from "react";
 
@@ -12,9 +10,8 @@ import { AppContext } from "./App";
 import "./Layers.css";
 import "./components/Legend.css";
 import { BoundsMatrix } from "./bounds";
-import { LayerGroup } from "./layers/LayerGroup";
+import { LayerCheckbox } from "./layers/LayerCheckbox";
 import { LayerI } from "./layers/LayerTypes";
-import { useLayerGroups } from "./layers/useLayerGroups";
 import { services } from "./layers/defaultServices";
 import "./components/CustomCheckbox.css";
 import "./components/DemoUrls.css";
@@ -45,6 +42,8 @@ export function LayerSelector() {
   >(null);
   const autoSelectedRef = useRef(false);
 
+  const [showDevTools, setShowDevTools] = useState(false);
+
   // Use our new hook to fetch all services at once
   const {
     allLayers: serviceLayers,
@@ -52,48 +51,16 @@ export function LayerSelector() {
     errors,
   } = useAllServices(services, serviceUpdateCounter);
 
-  // Group layers using the hook
-  const layerGroups = useLayerGroups(layers);
-
-  // Get selected layers
-  const selectedLayers = useMemo(() => {
-    return layers.filter((layer) => layer.visible);
-  }, [layers]);
-
-  // Filter layer groups based on search term
-  const filteredLayerGroups = useMemo(() => {
-    if (!searchTerm) return layerGroups;
-
+  // Filter layers based on search term
+  const filteredLayers = useMemo(() => {
+    if (!searchTerm) return layers;
     const searchTermLower = searchTerm.toLowerCase();
-    return layerGroups
-      .map((group) => ({
-        ...group,
-        layers: group.layers.filter((layer) => {
-          const matchesName = layer.name
-            .toLowerCase()
-            .includes(searchTermLower);
-          const matchesId = layer.id.toLowerCase().includes(searchTermLower);
-          const matchesService = group.title
-            .toLowerCase()
-            .includes(searchTermLower);
-
-          // Check service descriptions
-          let matchesDescription = false;
-          if (group.serviceId) {
-            matchesDescription =
-              services
-                .find((s) => s.name === layer.serviceId)
-                ?.description?.toLowerCase()
-                .includes(searchTermLower) || false;
-          }
-
-          return (
-            matchesName || matchesId || matchesService || matchesDescription
-          );
-        }),
-      }))
-      .filter((group) => group.layers.length > 0);
-  }, [layerGroups, searchTerm]);
+    return layers.filter((layer) => {
+      const matchesName = layer.name.toLowerCase().includes(searchTermLower);
+      const matchesId = layer.id.toLowerCase().includes(searchTermLower);
+      return matchesName || matchesId;
+    });
+  }, [layers, searchTerm]);
 
   // Handle service parameter from URL
   useEffect(() => {
@@ -179,37 +146,14 @@ export function LayerSelector() {
           }
         });
 
-        // Handle auto-selection of first layer for shared service
-        if (autoSelectServiceUrl && !autoSelectedRef.current) {
-          // Check if any visible layers exist (to avoid overriding user selection if any)
-          // If we are sharing, we assume we want to show this source.
-          // Filter for layers matching the autoSelectServiceUrl
-
-          // Find the first layer that matches the service URL
-          // We look in updatedLayers to ensure we get the fresh one
-          const matchingLayerIndex = updatedLayers.findIndex(
-            (l) =>
-              l.url &&
-              (l.url === autoSelectServiceUrl ||
-                l.url.startsWith(autoSelectServiceUrl)) &&
-              !l.visible,
-          );
-
-          if (matchingLayerIndex !== -1) {
-            console.log(
-              `Auto-selecting layer: ${updatedLayers[matchingLayerIndex].name}`,
-            );
-            updatedLayers[matchingLayerIndex] = {
-              ...updatedLayers[matchingLayerIndex],
-              visible: true,
-            };
+        // Auto-select first layer if none are visible
+        if (!autoSelectedRef.current) {
+          const hasVisible = updatedLayers.some((l) => l.visible);
+          if (!hasVisible && updatedLayers.length > 0) {
+            updatedLayers[0] = { ...updatedLayers[0], visible: true };
             hasChanges = true;
-            autoSelected = true;
+            autoSelectedRef.current = true;
           }
-        }
-
-        if (autoSelected) {
-          autoSelectedRef.current = true;
         }
 
         return hasChanges ? updatedLayers : prevLayers;
@@ -227,67 +171,24 @@ export function LayerSelector() {
     }
   }, [serviceSuccess]);
 
-  // Event handlers and other functions
-  // Handle removing a layer
-  const handleRemoveLayer = (
-    layerId: string,
-    uniqueId?: string,
-    serviceId?: string,
-    url?: string,
-  ) => {
-    setLayers((prevLayers) =>
-      prevLayers.map((layer) => {
-        // If uniqueId is provided, use it for comparison
-        if (uniqueId) {
-          const currentUniqueId =
-            layer.uniqueId ||
-            `${layer.serviceId || "noservice"}-${layer.url || "nourl"}-${layer.id}`;
-          return uniqueId === currentUniqueId
-            ? { ...layer, visible: false }
-            : layer;
-        }
-        // Otherwise fall back to just comparing IDs (for backward compatibility)
-        return layer.id === layerId ? { ...layer, visible: false } : layer;
-      }),
-    );
-  };
-
-  // Function to select the first layer from filtered results
-  const selectFirstFilteredLayer = () => {
-    // Find the first available layer from filtered groups
-    for (const group of filteredLayerGroups) {
-      if (group.layers.length > 0) {
-        const firstLayer = group.layers[0];
-        // Only select if not already visible
-        if (!firstLayer.visible) {
-          setLayers((prevLayers) =>
-            prevLayers.map((layer) => {
-              // Create a composite ID for comparison if uniqueId is not available
-              const firstLayerUniqueId =
-                firstLayer.uniqueId ||
-                `${firstLayer.serviceId || "noservice"}-${firstLayer.url || "nourl"}-${firstLayer.id}`;
-              const currentUniqueId =
-                layer.uniqueId ||
-                `${layer.serviceId || "noservice"}-${layer.url || "nourl"}-${layer.id}`;
-
-              // Compare using uniqueId or composite ID
-              return firstLayerUniqueId === currentUniqueId
-                ? { ...layer, visible: true }
-                : layer;
-            }),
-          );
-          // Clear the search term after selection
-          setSearchTerm("");
-        }
-        break;
-      }
-    }
-  };
-
-  // Handle key press in search input
+  // Select first filtered layer on Enter
   const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && searchTerm.trim() !== "") {
-      selectFirstFilteredLayer();
+      const firstLayer = filteredLayers.find((l) => !l.visible);
+      if (firstLayer) {
+        const targetId =
+          firstLayer.uniqueId ||
+          `${firstLayer.serviceId || "noservice"}-${firstLayer.url || "nourl"}-${firstLayer.id}`;
+        setLayers((prev) =>
+          prev.map((layer) => {
+            const id =
+              layer.uniqueId ||
+              `${layer.serviceId || "noservice"}-${layer.url || "nourl"}-${layer.id}`;
+            return id === targetId ? { ...layer, visible: true } : layer;
+          }),
+        );
+        setSearchTerm("");
+      }
     }
   };
 
@@ -370,101 +271,51 @@ export function LayerSelector() {
           <img src={theme.logo} alt="Logo" className="theme-logo" />
         )}
         <h3>{theme?.name || "Lagen"}</h3>
-        <button
-          title="Lagen sluiten"
-          onClick={() => setShowLayerSelector(false)}
-        >
-          <Cross1Icon />
-        </button>
-      </div>
-      <div className="selected-layers">
-        <h4>Geselecteerde lagen</h4>
-        <div className="selected-layers-list">
-          {selectedLayers.map((layer) => (
-            <div
-              key={
-                layer.uniqueId ||
-                `${layer.serviceId || "noservice"}-${layer.url || "nourl"}-${layer.id}`
-              }
-              className="selected-layer-item-container"
-            >
-              <div className="selected-layer-item">
-                <span>{layer.name}</span>
-                <button
-                  onClick={() =>
-                    handleRemoveLayer(
-                      layer.id,
-                      layer.uniqueId,
-                      layer.serviceId,
-                      layer.url,
-                    )
-                  }
-                  title="Verwijder laag"
-                  className="remove-layer-button"
-                >
-                  <Cross1Icon />
-                </button>
-              </div>
-              <Legend layer={layer} />
-            </div>
-          ))}
+        <div className="Titlebar__actions">
+          <button
+            title="Developer tools"
+            onClick={() => setShowDevTools(!showDevTools)}
+            className={showDevTools ? "active" : ""}
+          >
+            <GearIcon />
+          </button>
+          <button
+            title="Lagen sluiten"
+            onClick={() => setShowLayerSelector(false)}
+          >
+            <Cross1Icon />
+          </button>
         </div>
       </div>
 
-      <div className="add-service-container">
-        <div className="service-header">
-          <h4>Voeg service toe</h4>
-          <div className="service-info-tooltip">
-            <InfoCircledIcon className="info-icon" />
-            <div className="tooltip-content">
-              <p>
-                Voeg een WFS, WMS of JSON service toe door de URL in te voeren.
-              </p>
-              <p>Bijvoorbeeld:</p>
-              <ul>
-                <li>https://service.pdok.nl/hwh/luchtfotocir/wms/v1_0</li>
-                <li>
-                  https://service.pdok.nl/kadaster/bestuurlijkegebieden/wfs/v1_0
-                </li>
-              </ul>
-              <p>
-                Het systeem detecteert automatisch of het een WFS, WMS of JSON
-                service is.
-              </p>
-            </div>
+      {showDevTools && (
+        <div className="add-service-container">
+          <div className="service-input-container">
+            <input
+              type="text"
+              placeholder="Service URL..."
+              value={serviceUrl}
+              onChange={(e) => setServiceUrl(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddService()}
+              className="service-input"
+              disabled={isAddingService}
+            />
+            <button
+              onClick={handleAddService}
+              title="Voeg service toe"
+              className="add-service-button"
+              disabled={isAddingService}
+            >
+              {isAddingService ? "..." : <PlusIcon />}
+            </button>
           </div>
+          {serviceError && <div className="service-error">{serviceError}</div>}
+          {serviceSuccess && (
+            <div className="service-success">{serviceSuccess}</div>
+          )}
+          <DemoUrls />
         </div>
-        <div className="service-input-container">
-          <input
-            type="text"
-            placeholder="Service URL..."
-            value={serviceUrl}
-            onChange={(e) => setServiceUrl(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAddService()}
-            className="service-input"
-            disabled={isAddingService}
-          />
-          <button
-            onClick={handleAddService}
-            title="Voeg service toe"
-            className="add-service-button"
-            disabled={isAddingService}
-          >
-            {isAddingService ? "..." : <PlusIcon />}
-          </button>
-        </div>
-        {serviceError && <div className="service-error">{serviceError}</div>}
-        {serviceSuccess && (
-          <div className="service-success">{serviceSuccess}</div>
-        )}
-        
-        {!getServiceUrlFromUrl() && (
-          <DemoUrls onSelectUrl={(url) => {
-            setServiceUrl(url);
-            handleAddService(url);
-          }} />
-        )}
-      </div>
+      )}
 
       <div className="search-container">
         <MagnifyingGlassIcon className="search-icon" />
@@ -487,26 +338,18 @@ export function LayerSelector() {
         )}
       </div>
       <div className="layers-checkboxes" data-testid="layer-selector">
-        {filteredLayerGroups.map((group) => (
-          <LayerGroup
-            key={group.serviceId}
-            title={group.title}
-            layers={group.layers}
-            isExpanded={
-              !!searchTerm ||
-              (!!autoSelectServiceUrl &&
-                group.layers.some(
-                  (l) =>
-                    l.url &&
-                    (l.url === autoSelectServiceUrl ||
-                      l.url.startsWith(autoSelectServiceUrl)),
-                ))
+        {filteredLayers.map((layer) => (
+          <LayerCheckbox
+            layer={layer}
+            key={
+              layer.uniqueId ||
+              `${layer.serviceId || "noservice"}-${layer.url || "nourl"}-${layer.id}`
             }
             setSearchTerm={setSearchTerm}
           />
         ))}
         {isLoading && (
-          <div className="loading-message">Loading services...</div>
+          <div className="loading-message">Laden...</div>
         )}
       </div>
     </div>

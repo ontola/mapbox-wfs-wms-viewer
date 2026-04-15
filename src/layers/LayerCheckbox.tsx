@@ -2,6 +2,7 @@ import { useContext, Dispatch, SetStateAction } from "react";
 import { AppContext } from "../App";
 import { LayerI } from "./LayerTypes";
 import { CustomCheckbox } from "../components/CustomCheckbox";
+import { Legend } from "../components/Legend";
 import "../components/CustomCheckbox.css";
 
 interface LayerCheckboxProps {
@@ -12,32 +13,34 @@ interface LayerCheckboxProps {
 export function LayerCheckbox({ layer, setSearchTerm }: LayerCheckboxProps) {
   const { setLayers } = useContext(AppContext);
 
+  const layerUniqueId = layer.uniqueId || `${layer.serviceId || 'noservice'}-${layer.url || 'nourl'}-${layer.id}`;
+
   const handleChange = (checked: boolean) => {
     setLayers(prev =>
       prev.map(l => {
-        // Create a composite ID for comparison if uniqueId is not available
-        const layerUniqueId = layer.uniqueId || `${layer.serviceId || 'noservice'}-${layer.url || 'nourl'}-${layer.id}`;
-        const currentUniqueId = l.uniqueId || `${l.serviceId || 'noservice'}-${l.url || 'nourl'}-${l.id}`;
-
-        // Compare using uniqueId or composite ID
-        return layerUniqueId === currentUniqueId ? { ...l, visible: checked } : l;
+        const id = l.uniqueId || `${l.serviceId || 'noservice'}-${l.url || 'nourl'}-${l.id}`;
+        if (id === layerUniqueId) return { ...l, visible: checked };
+        if (checked) return { ...l, visible: false };
+        return l;
       })
     );
 
-    // Clear the search when turning on a layer
     if (checked) {
       setSearchTerm("");
     }
   };
 
   return (
-    <CustomCheckbox
-      checked={layer.visible}
-      onChange={handleChange}
-      label={layer.name}
-      description={layer.description}
-      className="layer-checkbox"
-      data-layer-id={layer.id}
-    />
+    <div>
+      <CustomCheckbox
+        checked={layer.visible}
+        onChange={handleChange}
+        label={layer.name}
+        description={layer.description}
+        className="layer-checkbox"
+        data-layer-id={layer.id}
+      />
+      {layer.visible && <Legend layer={layer} />}
+    </div>
   );
 }
