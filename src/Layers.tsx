@@ -42,11 +42,23 @@ export function LayerSelector() {
   >(null);
   const autoSelectedRef = useRef(false);
 
+  const hasNoParams = window.location.search === "";
+  const devPersisted = localStorage.getItem("devTools") === "true";
   const isDevEnabled = window.location.hostname === "localhost" ||
     new URLSearchParams(window.location.search).has("dev") ||
-    window.location.search === "";
-  const hasNoParams = window.location.search === "";
-  const [showDevTools, setShowDevTools] = useState(hasNoParams);
+    hasNoParams ||
+    devPersisted;
+  const [showDevTools, setShowDevTools] = useState(hasNoParams || devPersisted);
+
+  const toggleDevTools = () => {
+    const next = !showDevTools;
+    setShowDevTools(next);
+    if (next) {
+      localStorage.setItem("devTools", "true");
+    } else {
+      localStorage.removeItem("devTools");
+    }
+  };
 
   // Use our new hook to fetch all services at once
   const {
@@ -294,7 +306,7 @@ export function LayerSelector() {
           {isDevEnabled && (
             <button
               title="Developer tools"
-              onClick={() => setShowDevTools(!showDevTools)}
+              onClick={toggleDevTools}
               className={showDevTools ? "active" : ""}
             >
               <GearIcon />

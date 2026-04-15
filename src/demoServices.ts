@@ -28,10 +28,10 @@ export const DEMOS: DemoService[] = [
     color: "#1a5a96",
   },
   {
-    name: "Utrecht Begroeidterreindeel",
+    name: "Utrecht WOII Bunkers",
     type: "WFS",
     service: "https://geodata.utrecht.nl/geoserver/UtrechtOpen/ows",
-    layerId: "UtrechtOpen:BGT_BEGROEIDTERREINDEEL_SWC",
+    layerId: "UtrechtOpen:WOII_BUNKERS",
     color: "#cc0000",
   },
   {
@@ -39,6 +39,7 @@ export const DEMOS: DemoService[] = [
     type: "ArcGIS",
     service:
       "https://services-eu1.arcgis.com/SMnoOtmU2UWf0vRp/arcgis/rest/services/_171206_strooiroutes/FeatureServer",
+    layerId: "2",
     color: "#cc0000",
   },
   {

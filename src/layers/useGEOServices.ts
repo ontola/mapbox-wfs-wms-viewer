@@ -12,6 +12,7 @@ import {
   parseWMSCapabilities,
 } from "./capabilities";
 import bbox from "@turf/bbox";
+import { transformRDToWGS84 } from "./rdTransform";
 
 interface ServiceResult {
   layers: LayerI[];
@@ -97,19 +98,33 @@ export function useAllServices(
             throw new Error("No layers found in ArcGIS service");
           }
 
+          // Extract bounds from fullExtent if available
+          let bounds: [number, number, number, number] | undefined;
+          const ext = data.fullExtent || data.initialExtent;
+          if (ext) {
+            const isRD = ext.spatialReference?.wkid === 28992 || ext.spatialReference?.latestWkid === 28992;
+            if (isRD) {
+              const sw = transformRDToWGS84(ext.xmin, ext.ymin);
+              const ne = transformRDToWGS84(ext.xmax, ext.ymax);
+              bounds = [sw[0], sw[1], ne[0], ne[1]];
+            } else {
+              bounds = [ext.xmin, ext.ymin, ext.xmax, ext.ymax];
+            }
+          }
+
           const layers: LayerI[] = data.layers.map((l: any) => {
-            // For each layer, the actual data URL is the query endpoint
             const layerUrl = `${service.url}/${l.id}/query?where=1=1&outFields=*&f=geojson`;
-            
+
             return {
               id: l.id.toString(),
               name: l.name,
-              type: "vector", // Default to vector, will be handled by LayerSource
+              type: "vector",
               visible: false,
               url: layerUrl,
               serviceId: service.name,
               uniqueId: `arcgis-${service.url}-${l.id}`,
-              description: l.description || service.description
+              description: l.description || service.description,
+              bounds,
             };
           });
 
