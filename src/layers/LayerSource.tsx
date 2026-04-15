@@ -35,15 +35,15 @@ export function LayerSource({ layer, bounds = boundsNL, onLoadingChange }: Layer
   useEffect(() => {
     if (layer.type === "raster") return;
 
-    const isWfsRequest = layerUrl?.includes("request=GetFeature") || layerUrl?.includes("REQUEST=GetFeature") || layerUrl?.includes("service=WFS") || layerUrl?.includes("SERVICE=WFS");
+    const hasJsonOutput = layerUrl?.includes("outputFormat=application/json") || layerUrl?.includes("f=geojson");
+    const hasGetFeature = layerUrl?.includes("request=GetFeature") || layerUrl?.includes("REQUEST=GetFeature");
+    const isArcGIS = layerUrl?.includes("/query?") && layerUrl?.includes("f=geojson");
     const isJsonLayer =
-      !isWfsRequest && (
-        layer.uniqueId?.startsWith("json-") ||
-        layerUrl?.includes("outputFormat=application/json") ||
-        layerUrl?.endsWith(".json") ||
-        layerUrl?.endsWith(".geojson") ||
-        layerUrl?.includes("f=geojson")
-      );
+      layer.uniqueId?.startsWith("json-") ||
+      layerUrl?.endsWith(".json") ||
+      layerUrl?.endsWith(".geojson") ||
+      isArcGIS ||
+      (hasJsonOutput && hasGetFeature);
 
     const isCsvLayer =
       layer.uniqueId?.startsWith("csv-") ||
@@ -55,8 +55,6 @@ export function LayerSource({ layer, bounds = boundsNL, onLoadingChange }: Layer
     if (!isJsonLayer && !isCsvLayer) {
       wfsUrl = makeWfsUrl(layer, boundsRef.current);
     }
-
-    const isArcGIS = wfsUrl.includes("/query?") && wfsUrl.includes("f=geojson");
 
     console.log(`📡 Fetching data for ${layer.name} from ${wfsUrl}`);
 

@@ -1,6 +1,6 @@
 export interface DemoService {
   name: string;
-  type: "WFS" | "WMS" | "ArcGIS" | "JSON";
+  type: "WFS" | "WMS" | "ArcGIS" | "JSON" | "CSV";
   service: string;
   color?: string;
   logo?: string;
@@ -47,6 +47,13 @@ export const DEMOS: DemoService[] = [
     service: "https://geodata.utrecht.nl/geoserver/UtrechtOpen/ows",
     layerId: "UtrechtOpen:GEMEENTELIJKE_MONUMENTEN",
     color: "#cc0000",
+  },
+  {
+    name: "Groningen Speelplekken",
+    type: "WFS",
+    service: "https://maps.groningen.nl/geoserver/geo-data/ows",
+    layerId: "geo-data:Speelplekken_gemeente_Groningen",
+    color: "#2e7d32",
   },
   {
     name: "Groningen Speelplekken",
