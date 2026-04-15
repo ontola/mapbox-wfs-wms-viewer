@@ -44,7 +44,15 @@ export function useAllServices(
     () => services.filter((s) => s.type === "JSON"),
     [services, serviceUpdateCounter]
   );
-  
+  const csvServices = useMemo(
+    () => services.filter((s) => s.type === "CSV"),
+    [services, serviceUpdateCounter]
+  );
+  const arcgisServices = useMemo(
+    () => services.filter((s) => s.type === "ArcGIS_FeatureServer"),
+    [services, serviceUpdateCounter]
+  );
+
   const [allLayers, setAllLayers] = useState<LayerI[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errors, setErrors] = useState<Error[]>([]);
@@ -53,6 +61,8 @@ export function useAllServices(
   const [wfsResults, setWfsResults] = useState<ServiceResult[]>([]);
   const [wmsResults, setWmsResults] = useState<ServiceResult[]>([]);
   const [jsonResults, setJsonResults] = useState<ServiceResult[]>([]);
+  const [csvResults, setCsvResults] = useState<ServiceResult[]>([]);
+  const [arcgisResults, setArcgisResults] = useState<ServiceResult[]>([]);
 
   // Fetch both WFS and WMS services in parallel
   useEffect(() => {
@@ -62,9 +72,64 @@ export function useAllServices(
       const wmsPromise = fetchWmsServices();
       const wfsPromise = fetchWfsServices();
       const jsonPromise = fetchJsonServices();
+      const csvPromise = fetchCsvServices();
+      const arcgisPromise = fetchArcgisServices();
 
       // Wait for both to complete
-      await Promise.all([wmsPromise, wfsPromise, jsonPromise]);
+      await Promise.all([wmsPromise, wfsPromise, jsonPromise, csvPromise, arcgisPromise]);
+    };
+
+    // Function to fetch ArcGIS FeatureServer services
+    const fetchArcgisServices = async () => {
+      if (arcgisServices.length === 0) {
+        setArcgisResults([]);
+        return;
+      }
+
+      const servicePromises = arcgisServices.map(async (service) => {
+        try {
+          const response = await fetch(`${service.url}?f=json`);
+          if (!response.ok) throw new Error("Failed to fetch ArcGIS metadata");
+          
+          const data = await response.json();
+          
+          if (!data.layers) {
+            throw new Error("No layers found in ArcGIS service");
+          }
+
+          const layers: LayerI[] = data.layers.map((l: any) => {
+            // For each layer, the actual data URL is the query endpoint
+            const layerUrl = `${service.url}/${l.id}/query?where=1=1&outFields=*&f=geojson`;
+            
+            return {
+              id: l.id.toString(),
+              name: l.name,
+              type: "vector", // Default to vector, will be handled by LayerSource
+              visible: false,
+              url: layerUrl,
+              serviceId: service.name,
+              uniqueId: `arcgis-${service.url}-${l.id}`,
+              description: l.description || service.description
+            };
+          });
+
+          return {
+            layers,
+            loading: false,
+            error: null,
+          };
+        } catch (err) {
+          console.error("Error processing ArcGIS service:", err);
+          return {
+            layers: [],
+            loading: false,
+            error: err instanceof Error ? err : new Error("Failed to process ArcGIS service"),
+          };
+        }
+      });
+
+      const serviceResults = await Promise.all(servicePromises);
+      setArcgisResults(serviceResults);
     };
 
     // Function to fetch JSON services
@@ -73,21 +138,29 @@ export function useAllServices(
         setJsonResults([]);
         return;
       }
-      
+
       const servicePromises = jsonServices.map(async (service) => {
         try {
-          // Fetch the JSON to get its bounds
-          const response = await fetch(service.url);
-          const data = await response.json();
           let layerBounds: [number, number, number, number] | undefined;
           
-          try {
-            if (data.type === 'FeatureCollection' || data.type === 'Feature') {
-              const calculatedBbox = bbox(data);
-              layerBounds = [calculatedBbox[0], calculatedBbox[1], calculatedBbox[2], calculatedBbox[3]];
+          // Only fetch the JSON to get its bounds if it's not a potentially huge WFS GetFeature request
+          // or if it explicitly limits the features
+          const isHugeWfs = (service.url.includes('request=GetFeature') || service.url.includes('REQUEST=GetFeature')) && 
+                            !service.url.includes('count=') && 
+                            !service.url.includes('maxFeatures=');
+                            
+          if (!isHugeWfs) {
+            try {
+              const response = await fetch(service.url);
+              const data = await response.json();
+              
+              if (data.type === 'FeatureCollection' || data.type === 'Feature') {
+                const calculatedBbox = bbox(data);
+                layerBounds = [calculatedBbox[0], calculatedBbox[1], calculatedBbox[2], calculatedBbox[3]];
+              }
+            } catch (e) {
+              console.warn("Could not calculate bounds for JSON:", e);
             }
-          } catch (e) {
-            console.warn("Could not calculate bounds for JSON:", e);
           }
 
           // For JSON, we just create a single layer that points to the JSON file
@@ -120,6 +193,47 @@ export function useAllServices(
 
       const serviceResults = await Promise.all(servicePromises);
       setJsonResults(serviceResults);
+    };
+
+    // Function to fetch CSV services
+    const fetchCsvServices = async () => {
+      if (csvServices.length === 0) {
+        setCsvResults([]);
+        return;
+      }
+
+      const servicePromises = csvServices.map(async (service) => {
+        try {
+          // For CSV, we just create a single layer that points to the CSV file
+          // Real processing happens in LayerSource.tsx
+          const layer: LayerI = {
+            id: service.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase(),
+            name: service.name,
+            type: "vector", // Default to vector, will be handled by LayerSource
+            visible: true,
+            url: service.url,
+            serviceId: service.name,
+            uniqueId: `csv-${service.url}`,
+            description: service.description
+          };
+
+          return {
+            layers: [layer],
+            loading: false,
+            error: null,
+          };
+        } catch (err) {
+          console.error("Error processing CSV service:", err);
+          return {
+            layers: [],
+            loading: false,
+            error: err instanceof Error ? err : new Error("Failed to process CSV service"),
+          };
+        }
+      });
+
+      const serviceResults = await Promise.all(servicePromises);
+      setCsvResults(serviceResults);
     };
 
     // Function to fetch WMS services
@@ -256,6 +370,8 @@ export function useAllServices(
       ...wfsResults.filter((r) => r.error).map((r) => r.error!),
       ...wmsResults.filter((r) => r.error).map((r) => r.error!),
       ...jsonResults.filter((r) => r.error).map((r) => r.error!),
+      ...csvResults.filter((r) => r.error).map((r) => r.error!),
+      ...arcgisResults.filter((r) => r.error).map((r) => r.error!),
     ];
 
     setErrors(allErrors);
@@ -263,73 +379,48 @@ export function useAllServices(
     const wfsLayers = wfsResults.flatMap((result) => result.layers);
     const wmsLayers = wmsResults.flatMap((result) => result.layers);
     const jsonLayers = jsonResults.flatMap((result) => result.layers);
+    const csvLayers = csvResults.flatMap((result) => result.layers);
+    const arcgisLayers = arcgisResults.flatMap((result) => result.layers);
 
     // Check for duplicate layers and create a unique set
     const uniqueLayers: LayerI[] = [];
     const seenIds = new Set<string>();
 
-    // Process WFS layers first
-    wfsLayers.forEach((layer) => {
-      // Use uniqueId if available, otherwise create a composite ID
-      const uniqueId =
-        (layer as any).uniqueId ||
-        `${layer.serviceId || "noservice"}-${layer.url || "nourl"}-${layer.id}`;
+    // Helper function to process layers
+    const processLayers = (layers: LayerI[], type: string) => {
+      layers.forEach((layer) => {
+        const uniqueId =
+          (layer as any).uniqueId ||
+          `${layer.serviceId || "noservice"}-${layer.url || "nourl"}-${layer.id}`;
 
-      if (seenIds.has(uniqueId)) {
-        console.log(
-          `Skipping duplicate WFS layer: ${layer.id} from service ${layer.serviceId}`
-        );
-      } else {
-        seenIds.add(uniqueId);
-        uniqueLayers.push(layer);
-      }
-    });
+        if (seenIds.has(uniqueId)) {
+          console.log(
+            `Skipping duplicate ${type} layer: ${layer.id} from service ${layer.serviceId}`
+          );
+        } else {
+          seenIds.add(uniqueId);
+          uniqueLayers.push(layer);
+        }
+      });
+    };
 
-    wmsLayers.forEach((layer) => {
-      // Use uniqueId if available, otherwise create a composite ID
-      const uniqueId =
-        (layer as any).uniqueId ||
-        `${layer.serviceId || "noservice"}-${layer.url || "nourl"}-${layer.id}`;
+    processLayers(wfsLayers, "WFS");
+    processLayers(wmsLayers, "WMS");
+    processLayers(jsonLayers, "JSON");
+    processLayers(csvLayers, "CSV");
+    processLayers(arcgisLayers, "ArcGIS");
 
-      if (seenIds.has(uniqueId)) {
-        console.log(
-          `Skipping duplicate WMS layer: ${layer.id} from service ${layer.serviceId}`
-        );
-      } else {
-        seenIds.add(uniqueId);
-        uniqueLayers.push(layer);
-      }
-    });
-    
-    jsonLayers.forEach((layer) => {
-      // Use uniqueId if available, otherwise create a composite ID
-      const uniqueId =
-        (layer as any).uniqueId ||
-        `${layer.serviceId || "noservice"}-${layer.url || "nourl"}-${layer.id}`;
-
-      if (seenIds.has(uniqueId)) {
-        console.log(
-          `Skipping duplicate JSON layer: ${layer.id} from service ${layer.serviceId}`
-        );
-      } else {
-        seenIds.add(uniqueId);
-        uniqueLayers.push(layer);
-      }
-    });
-    
     setAllLayers(uniqueLayers);
 
-    // Only set isLoading to false when we have results for both WFS and WMS services
-    // and the number of results matches the number of services
-    const wfsLoaded =
-      wfsServices.length > 0 ? wfsResults.length === wfsServices.length : true;
-    const wmsLoaded =
-      wmsServices.length > 0 ? wmsResults.length === wmsServices.length : true;
-    const jsonLoaded =
-      jsonServices.length > 0 ? jsonResults.length === jsonServices.length : true;
+    // Only set isLoading to false when we have results for all services
+    const wfsLoaded = wfsServices.length > 0 ? wfsResults.length === wfsServices.length : true;
+    const wmsLoaded = wmsServices.length > 0 ? wmsResults.length === wmsServices.length : true;
+    const jsonLoaded = jsonServices.length > 0 ? jsonResults.length === jsonServices.length : true;
+    const csvLoaded = csvServices.length > 0 ? csvResults.length === csvServices.length : true;
+    const arcgisLoaded = arcgisServices.length > 0 ? arcgisResults.length === arcgisServices.length : true;
 
-    setIsLoading(!(wfsLoaded && wmsLoaded && jsonLoaded));
-  }, [wfsResults, wmsResults, jsonResults, wfsServices, wmsServices, jsonServices]);
+    setIsLoading(!(wfsLoaded && wmsLoaded && jsonLoaded && csvLoaded && arcgisLoaded));
+  }, [wfsResults, wmsResults, jsonResults, csvResults, arcgisResults, wfsServices, wmsServices, jsonServices, csvServices, arcgisServices]);
 
   return { allLayers, isLoading, errors };
 }

@@ -13,7 +13,7 @@ export function useLayerGroups(layers: LayerI[]): LayerGroup[] {
     // Create a map to store layers by group
     const groupedLayers = new Map<string, LayerI[]>();
 
-    // Group layers by service
+    // Group layers by service from the services list
     services.forEach((service) => {
       groupedLayers.set(
         service.name,
@@ -24,6 +24,14 @@ export function useLayerGroups(layers: LayerI[]): LayerGroup[] {
             layer.serviceId === service.name,
         ),
       );
+    });
+
+    // Also group any remaining layers by their serviceId if not already grouped
+    layers.forEach((layer) => {
+      if (layer.serviceId && !groupedLayers.has(layer.serviceId)) {
+        const serviceLayers = layers.filter(l => l.serviceId === layer.serviceId);
+        groupedLayers.set(layer.serviceId, serviceLayers);
+      }
     });
 
     // Convert map to array of LayerGroup objects

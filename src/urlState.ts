@@ -21,6 +21,7 @@ function encodeLayers(layers: LayerI[]): string {
     type: layer.type,
     serviceId: layer.serviceId,
     textField: layer.textField,
+    uniqueId: layer.uniqueId,
   }));
   return btoa(JSON.stringify(layerData));
 }
@@ -63,7 +64,8 @@ export function setLayersInUrl(layers: LayerI[]): void {
     params.delete("layers");
   }
 
-  const newUrl = `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}`;
+  const queryString = params.toString();
+  const newUrl = `${window.location.pathname}${queryString ? "?" + queryString : ""}`;
   window.history.replaceState({}, "", newUrl);
 }
 
@@ -101,7 +103,8 @@ export function setMapViewInUrl(
   params.set("lng", longitude.toFixed(4));
   params.set("zoom", zoom.toFixed(2));
 
-  const newUrl = `${window.location.pathname}?${params.toString()}`;
+  const queryString = params.toString();
+  const newUrl = `${window.location.pathname}${queryString ? "?" + queryString : ""}`;
   window.history.replaceState({}, "", newUrl);
 }
 

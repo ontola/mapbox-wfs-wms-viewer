@@ -118,7 +118,7 @@ export interface WFSCapabilities {
   };
 }
 
-export type ServiceType = "WFS" | "WMS" | "JSON";
+export type ServiceType = "WFS" | "WMS" | "JSON" | "ArcGIS_FeatureServer";
 
 export interface Service {
   /** Show to the user */

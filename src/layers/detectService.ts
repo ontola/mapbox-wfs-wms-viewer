@@ -2,33 +2,49 @@ import { Service } from "./LayerTypes";
 import { fetchCapabilities } from "./capabilities";
 
 /**
- * Attempts to detect if a URL is a WFS or WMS service
+ * Attempts to detect if a URL is a WFS, WMS, JSON, or ArcGIS FeatureServer service
  * @param url The URL to check
  * @returns An object with the detected service type and a service object
  */
 export async function detectServiceType(url: string): Promise<{
-  type: "WFS" | "WMS" | "JSON" | null;
+  type: "WFS" | "WMS" | "JSON" | "CSV" | "ArcGIS_FeatureServer" | null;
   service: Service | null;
   error?: string;
 }> {
-  // Clean the URL by removing any existing query parameters
-  const baseUrl = url.split("?")[0];
+  // Clean the URL by removing any existing query parameters for WFS/WMS base URL detection
+  let baseUrl = url.split("?")[0];
 
   try {
-    // Check if it's a JSON file
-    if (url.toLowerCase().endsWith(".json") || url.includes("outputFormat=application/json") || url.includes("f=json")) {
+    // 1. Check if it's explicitly a JSON/GeoJSON resource based on the URL
+    if (
+      url.toLowerCase().endsWith(".json") || 
+      url.toLowerCase().endsWith(".geojson") || 
+      url.includes("outputFormat=application/json") || 
+      url.includes("f=json") || 
+      url.includes("f=geojson")
+    ) {
       try {
         const response = await fetch(url);
         if (response.ok) {
-          const data = await response.json();
+          // We don't strictly need to parse the whole JSON here, but it verifies it's valid
+          await response.json(); 
+          
           // Extract a meaningful name from the URL path
           const urlParts = baseUrl.split("/");
           let title = urlParts.pop() || "JSON Data";
-          
-          if (title.endsWith('.json')) {
-            title = title.substring(0, title.length - 5);
+
+          if (title.endsWith('.json') || title.endsWith('.geojson')) {
+            title = title.replace(/\.geojson$/, '').replace(/\.json$/, '');
           }
-          
+
+          // If it's a WFS GetFeature URL, try to extract the typeName for a better title
+          if (url.includes("typeName=")) {
+            const match = url.match(/typeName=([^&]+)/);
+            if (match && match[1]) {
+              title = match[1].split(':').pop() || title;
+            }
+          }
+
           return {
             type: "JSON",
             service: {
@@ -44,7 +60,69 @@ export async function detectServiceType(url: string): Promise<{
       }
     }
 
-    // First try WFS
+    // 2. Check if it's a CSV resource based on the URL
+    if (url.toLowerCase().endsWith(".csv") || url.toLowerCase().includes(".csv?")) {
+      try {
+        const response = await fetch(url);
+        if (response.ok) {
+          // Verify it's text/csv or at least plain text
+          const contentType = response.headers.get("content-type") || "";
+          const text = await response.text();
+          
+          if (text.length > 0) {
+            // Extract a meaningful name from the URL path
+            const urlParts = baseUrl.split("/");
+            let title = urlParts.pop() || "CSV Data";
+            title = title.replace(/\.csv$/, "");
+
+            return {
+              type: "CSV",
+              service: {
+                name: title,
+                url: url,
+                description: `CSV data from: ${url}`,
+                type: "CSV",
+              },
+            };
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching CSV:", e);
+      }
+    }
+
+    // 2. Check if it's an ArcGIS FeatureServer or MapServer
+    if (baseUrl.includes("/FeatureServer") || baseUrl.includes("/MapServer")) {
+      try {
+        const response = await fetch(`${baseUrl}?f=json`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.layers) {
+            const urlParts = baseUrl.split("/");
+            // Usually the service name is right before FeatureServer/MapServer
+            const serverIndex = urlParts.findIndex(p => p === "FeatureServer" || p === "MapServer");
+            let title = serverIndex > 0 ? urlParts[serverIndex - 1] : "ArcGIS Service";
+            
+            // Clean up title
+            title = title.replace(/_/g, " ");
+
+            return {
+              type: "ArcGIS_FeatureServer",
+              service: {
+                name: title,
+                url: baseUrl,
+                description: data.serviceDescription || data.description || `ArcGIS Service: ${title}`,
+                type: "ArcGIS_FeatureServer",
+              },
+            };
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching ArcGIS service metadata:", e);
+      }
+    }
+
+    // 3. Try WFS Capabilities
     try {
       const { xmlDoc, text } = await fetchCapabilities(baseUrl, "WFS");
 
@@ -73,15 +151,13 @@ export async function detectServiceType(url: string): Promise<{
             type: "WFS",
           },
         };
-      } else {
-        console.log("Response doesn't contain WFS capabilities markers");
       }
     } catch (fetchError) {
       console.error("Error fetching WFS capabilities:", fetchError);
       // Continue to try WMS
     }
 
-    // Try WMS
+    // 4. Try WMS Capabilities
     try {
       const { xmlDoc, text } = await fetchCapabilities(baseUrl, "WMS");
 
@@ -95,13 +171,11 @@ export async function detectServiceType(url: string): Promise<{
         // Try multiple ways to get the service name
         let title = null;
 
-        // First try to get the Service Title
         const serviceTitleElement = xmlDoc.querySelector("Service > Title");
         if (serviceTitleElement && serviceTitleElement.textContent) {
           title = serviceTitleElement.textContent;
         }
 
-        // If that fails, try the first Layer Title
         if (!title) {
           const layerTitleElement = xmlDoc.querySelector("Layer > Title");
           if (layerTitleElement && layerTitleElement.textContent) {
@@ -109,7 +183,6 @@ export async function detectServiceType(url: string): Promise<{
           }
         }
 
-        // If still no title, try any Title element
         if (!title) {
           const anyTitleElement = xmlDoc.getElementsByTagName("Title")[0];
           if (anyTitleElement && anyTitleElement.textContent) {
@@ -117,15 +190,12 @@ export async function detectServiceType(url: string): Promise<{
           }
         }
 
-        // For ESRI WMS servers, try to get the root Layer name
         if (!title || title === "WMS") {
-          // Try to get the root Layer name which often contains the actual service name
           const rootLayerName = xmlDoc.querySelector("Layer > Name");
           if (rootLayerName && rootLayerName.textContent) {
             title = rootLayerName.textContent;
           }
 
-          // If that fails, try to get the first child Layer name
           if (!title || title === "WMS") {
             const childLayerName = xmlDoc.querySelector("Layer > Layer > Name");
             if (childLayerName && childLayerName.textContent) {
@@ -134,11 +204,8 @@ export async function detectServiceType(url: string): Promise<{
           }
         }
 
-        // If all else fails, extract a name from the URL
         if (!title || title === "WMS") {
-          // Extract a meaningful name from the URL path
           const urlParts = baseUrl.split("/");
-          // Find the most descriptive part of the URL (usually before MapServer/WMSServer)
           for (let i = urlParts.length - 2; i >= 0; i--) {
             if (
               urlParts[i] &&
@@ -147,7 +214,6 @@ export async function detectServiceType(url: string): Promise<{
               )
             ) {
               title = urlParts[i].replace(/_/g, " ");
-              // Capitalize first letter of each word
               title = title
                 .split(" ")
                 .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -156,33 +222,25 @@ export async function detectServiceType(url: string): Promise<{
             }
           }
 
-          // If still no title, use the last part of the URL
           if (!title || title === "WMS") {
             title = urlParts.pop() || "WMS Service";
           }
         }
 
-        // Special case for ESRI MapServer WMS services
         if (baseUrl.includes("MapServer/WMSServer")) {
-          // Extract the service name from the URL path
           const urlParts = baseUrl.split("/");
           const mapServerIndex = urlParts.findIndex(
             (part) => part === "MapServer",
           );
 
           if (mapServerIndex > 0) {
-            // Look for the service name in the URL path
-            // It's usually the part before MapServer
             const servicePart = urlParts[mapServerIndex - 1];
-
             if (
               servicePart &&
               servicePart !== "services" &&
               servicePart !== "server"
             ) {
-              // Format the service name
               title = servicePart.replace(/_/g, " ");
-              // Capitalize first letter of each word
               title = title
                 .split(" ")
                 .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -191,7 +249,6 @@ export async function detectServiceType(url: string): Promise<{
           }
         }
 
-        // Get description if available
         let description = null;
         const abstractElement =
           xmlDoc.querySelector("Service > Abstract") ||
@@ -212,9 +269,6 @@ export async function detectServiceType(url: string): Promise<{
           },
         };
       } else {
-        // Response doesn't contain WMS capabilities markers
-
-        // Check if the response contains an error message
         if (
           text.includes("not allowed") ||
           text.includes("access denied") ||
@@ -227,13 +281,10 @@ export async function detectServiceType(url: string): Promise<{
           };
         }
 
-        // Try to create a service anyway if we got a response but couldn't parse it
         if (text.length > 0) {
-          // Extract a name from the URL
           const urlParts = baseUrl.split("/");
           let title = "Unknown Service";
 
-          // Find the most descriptive part of the URL
           for (let i = urlParts.length - 2; i >= 0; i--) {
             if (
               urlParts[i] &&
@@ -242,7 +293,6 @@ export async function detectServiceType(url: string): Promise<{
               )
             ) {
               title = urlParts[i].replace(/_/g, " ");
-              // Capitalize first letter of each word
               title = title
                 .split(" ")
                 .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -251,7 +301,6 @@ export async function detectServiceType(url: string): Promise<{
             }
           }
 
-          // If the URL ends with WMSServer, assume it's a WMS service
           if (baseUrl.endsWith("WMSServer")) {
             return {
               type: "WMS",
@@ -278,12 +327,11 @@ export async function detectServiceType(url: string): Promise<{
       };
     }
 
-    // If we get here, we couldn't detect a valid service
     return {
       type: null,
       service: null,
       error:
-        "Could not detect a valid WFS or WMS service at this URL. Check the console for more details.",
+        "Could not detect a valid WFS, WMS, JSON, or ArcGIS service at this URL. Check the console for more details.",
     };
   } catch (error) {
     console.error("Error in detectServiceType:", error);

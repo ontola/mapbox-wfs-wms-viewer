@@ -51,7 +51,7 @@ export const startBounds = [
   boundsUtrecht[0], // Southwest longitude
   boundsUtrecht[1], // Southwest latitude
   boundsUtrecht[2], // Northeast longitude
-  boundsUtrecht[3]  // Northeast latitude
+  boundsUtrecht[3], // Northeast latitude
 ];
 
 export const zoomStreetLevel = 18;
@@ -98,21 +98,26 @@ export function Map() {
       mapRef.current.getCanvas().style.cursor = hoveredFeature ? "pointer" : "";
 
       // Update hover info with feature and position
-      setHoverInfo(hoveredFeature && { feature: hoveredFeature, x: point.x, y: point.y });
+      setHoverInfo(
+        hoveredFeature && { feature: hoveredFeature, x: point.x, y: point.y },
+      );
     },
     [layers],
   );
 
-  const visibleLayers = useMemo(() => layers.filter(layer => layer.visible), [layers]);
+  const visibleLayers = useMemo(
+    () => layers.filter((layer) => layer.visible),
+    [layers],
+  );
 
   const interactiveLayers = useMemo(() => {
     // Get layer IDs from visible layers
     const visibleLayerIds = layers
-      .filter(layer => layer.visible)
-      .flatMap(layer =>
-        layer.type === 'vector'
+      .filter((layer) => layer.visible)
+      .flatMap((layer) =>
+        layer.type === "vector"
           ? [layer.id, `${layer.id}-symbol`, `${layer.id}-circle`] // Include circle layers for point features
-          : [layer.id]
+          : [layer.id],
       );
 
     return visibleLayerIds;
@@ -131,14 +136,16 @@ export function Map() {
   );
 
   // Track previous visible layers to detect changes and bounds updates
-  const prevVisibleLayersRef = useRef<globalThis.Map<string, boolean>>(new globalThis.Map()); // Map<uniqueId, hasBounds>
+  const prevVisibleLayersRef = useRef<globalThis.Map<string, boolean>>(
+    new globalThis.Map(),
+  ); // Map<uniqueId, hasBounds>
 
   // Auto-zoom to layer bounds when a layer is toggled on OR when bounds become available
   useEffect(() => {
     const currentVisibleLayersMap = new globalThis.Map<string, boolean>();
     let layerToZoomTo: any = null;
 
-    visibleLayers.forEach(layer => {
+    visibleLayers.forEach((layer) => {
       const id = layer.uniqueId || layer.id;
       const hasBounds = !!layer.bounds; // Store whether it has bounds
       currentVisibleLayersMap.set(id, hasBounds);
@@ -158,7 +165,10 @@ export function Map() {
     });
 
     if (layerToZoomTo && layerToZoomTo.bounds && mapRef.current) {
-      console.log(`Zooming to bounds for layer ${layerToZoomTo.name}:`, layerToZoomTo.bounds);
+      console.log(
+        `Zooming to bounds for layer ${layerToZoomTo.name}:`,
+        layerToZoomTo.bounds,
+      );
 
       // Check if bounds are valid (not all zeros or NaN)
       const [west, south, east, north] = layerToZoomTo.bounds;
@@ -167,12 +177,12 @@ export function Map() {
           mapRef.current.fitBounds(
             [
               [west, south], // Southwest
-              [east, north]  // Northeast
+              [east, north], // Northeast
             ],
             {
               padding: 20,
-              duration: 0
-            }
+              duration: 0,
+            },
           );
         } catch (err) {
           console.error("Error fitting bounds:", err);
@@ -199,13 +209,13 @@ export function Map() {
           trash: true,
         },
         // Ensure proper selection behavior
-        defaultMode: 'simple_select',
+        defaultMode: "simple_select",
         boxSelect: true,
-        touchEnabled: true
+        touchEnabled: true,
       });
 
       // Add the control to the map - position it at the bottom-left
-      map.addControl(drawRef.current, 'bottom-left');
+      map.addControl(drawRef.current, "bottom-left");
     }
 
     // Consolidated function to calculate and update measurements
@@ -215,19 +225,28 @@ export function Map() {
       const data = drawRef.current.getAll();
 
       // Calculate area for polygons
-      const polygons = data.features.filter(f => f.geometry.type === 'Polygon');
+      const polygons = data.features.filter(
+        (f) => f.geometry.type === "Polygon",
+      );
       if (polygons.length > 0) {
-        const totalArea = polygons.reduce((sum, polygon) => sum + turf.area(polygon), 0);
+        const totalArea = polygons.reduce(
+          (sum, polygon) => sum + turf.area(polygon),
+          0,
+        );
         setArea(Math.round(totalArea));
       } else {
         setArea(0);
       }
 
       // Calculate length for lines
-      const lines = data.features.filter(f => f.geometry.type === 'LineString');
+      const lines = data.features.filter(
+        (f) => f.geometry.type === "LineString",
+      );
       if (lines.length > 0) {
-        const totalLength = lines.reduce((sum, line) =>
-          sum + turf.length(line, { units: 'meters' }), 0);
+        const totalLength = lines.reduce(
+          (sum, line) => sum + turf.length(line, { units: "meters" }),
+          0,
+        );
         setLineLength(Math.round(totalLength));
       } else {
         setLineLength(0);
@@ -235,11 +254,11 @@ export function Map() {
     };
 
     // Register all event listeners
-    (map as any).on('draw.create', updateMeasurements);
-    (map as any).on('draw.update', updateMeasurements);
-    (map as any).on('draw.selectionchange', updateMeasurements);
-    (map as any).on('draw.render', updateMeasurements);
-    (map as any).on('draw.modechange', updateMeasurements);
+    (map as any).on("draw.create", updateMeasurements);
+    (map as any).on("draw.update", updateMeasurements);
+    (map as any).on("draw.selectionchange", updateMeasurements);
+    (map as any).on("draw.render", updateMeasurements);
+    (map as any).on("draw.modechange", updateMeasurements);
 
     // Special handler for delete events to ensure measurements are reset
     const handleDeleteEvent = () => {
@@ -247,10 +266,10 @@ export function Map() {
       updateMeasurements();
     };
 
-    (map as any).on('draw.delete', handleDeleteEvent);
+    (map as any).on("draw.delete", handleDeleteEvent);
 
     // Add a click event listener to the trash button
-    const trashButton = document.querySelector('.mapbox-gl-draw_trash');
+    const trashButton = document.querySelector(".mapbox-gl-draw_trash");
 
     // Define the handler function outside so we can reference it in the cleanup
     const handleTrashClick = (e) => {
@@ -263,16 +282,16 @@ export function Map() {
     };
 
     if (trashButton) {
-      trashButton.addEventListener('click', handleTrashClick);
+      trashButton.addEventListener("click", handleTrashClick);
     }
 
     // Cleanup
     return () => {
       if (drawRef.current) {
         // Remove the click event listener from the trash button
-        const trashButton = document.querySelector('.mapbox-gl-draw_trash');
+        const trashButton = document.querySelector(".mapbox-gl-draw_trash");
         if (trashButton) {
-          trashButton.removeEventListener('click', handleTrashClick);
+          trashButton.removeEventListener("click", handleTrashClick);
         }
 
         map.removeControl(drawRef.current);
@@ -280,19 +299,18 @@ export function Map() {
       }
 
       // Remove all event listeners
-      (map as any).off('draw.create', updateMeasurements);
-      (map as any).off('draw.update', updateMeasurements);
-      (map as any).off('draw.selectionchange', updateMeasurements);
-      (map as any).off('draw.render', updateMeasurements);
-      (map as any).off('draw.modechange', updateMeasurements);
-      (map as any).off('draw.delete', handleDeleteEvent);
+      (map as any).off("draw.create", updateMeasurements);
+      (map as any).off("draw.update", updateMeasurements);
+      (map as any).off("draw.selectionchange", updateMeasurements);
+      (map as any).off("draw.render", updateMeasurements);
+      (map as any).off("draw.modechange", updateMeasurements);
+      (map as any).off("draw.delete", handleDeleteEvent);
     };
   }, [mapRef.current]); // Only run once when map is initialized
 
   return (
     <div className="Map__wrapper">
       <div className="Map__buttons Map__buttons--left">
-
         {!showLayerSelector && (
           <button
             id="toggle-layers-view"
@@ -302,9 +320,7 @@ export function Map() {
           </button>
         )}
       </div>
-      <div className="Map__buttons Map__buttons--right">
-
-      </div>
+      <div className="Map__buttons Map__buttons--right"></div>
 
       {/* Measurement displays */}
       {(area > 0 || lineLength > 0) && (
@@ -332,12 +348,22 @@ export function Map() {
         onClick={handleMapClick}
         onMove={(evt) => {
           setViewState(evt.viewState);
+          // Update current bounds for layer filtering
+          const map = mapRef.current?.getMap();
+          if (map) {
+            const bounds = map.getBounds();
+            setCurrentBounds(bounds);
+          }
           // Debounce URL updates
           if (updateUrlTimeoutRef.current) {
             clearTimeout(updateUrlTimeoutRef.current);
           }
           updateUrlTimeoutRef.current = window.setTimeout(() => {
-            setMapViewInUrl(evt.viewState.latitude, evt.viewState.longitude, evt.viewState.zoom);
+            setMapViewInUrl(
+              evt.viewState.latitude,
+              evt.viewState.longitude,
+              evt.viewState.zoom,
+            );
           }, 500);
         }}
         style={{ width: "100%", height: "100%", flexBasis: "600px", flex: 1 }}
@@ -349,8 +375,16 @@ export function Map() {
         {hoverInfo && <ToolTip {...hoverInfo} />}
         <NavigationControl position={"bottom-right"} />
         <GeolocateControl position={"bottom-left"} />
-        {visibleLayers
-          .map((layer) => <LayerSource layer={layer} key={layer.uniqueId || `${layer.serviceId || 'noservice'}-${layer.url || 'nourl'}-${layer.id}`} bounds={currentBounds ? boundsLngLatToMatrix(currentBounds) : null} />)}
+        {visibleLayers.map((layer) => (
+          <LayerSource
+            layer={layer}
+            key={
+              layer.uniqueId ||
+              `${layer.serviceId || "noservice"}-${layer.url || "nourl"}-${layer.id}`
+            }
+            bounds={currentBounds ? boundsLngLatToMatrix(currentBounds) : null}
+          />
+        ))}
       </MapGL>
       <Dialog
         feature={clickedFeature}
