@@ -42,7 +42,11 @@ export function LayerSelector() {
   >(null);
   const autoSelectedRef = useRef(false);
 
-  const [showDevTools, setShowDevTools] = useState(false);
+  const isDevEnabled = window.location.hostname === "localhost" ||
+    new URLSearchParams(window.location.search).has("dev") ||
+    window.location.search === "";
+  const hasNoParams = window.location.search === "";
+  const [showDevTools, setShowDevTools] = useState(hasNoParams);
 
   // Use our new hook to fetch all services at once
   const {
@@ -287,13 +291,15 @@ export function LayerSelector() {
           )}
         </div>
         <div className="Titlebar__actions">
-          <button
-            title="Developer tools"
-            onClick={() => setShowDevTools(!showDevTools)}
-            className={showDevTools ? "active" : ""}
-          >
-            <GearIcon />
-          </button>
+          {isDevEnabled && (
+            <button
+              title="Developer tools"
+              onClick={() => setShowDevTools(!showDevTools)}
+              className={showDevTools ? "active" : ""}
+            >
+              <GearIcon />
+            </button>
+          )}
           <button
             title="Lagen sluiten"
             onClick={() => setShowLayerSelector(false)}
