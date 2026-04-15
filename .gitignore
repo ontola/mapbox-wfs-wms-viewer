@@ -27,3 +27,6 @@ dist-ssr
 
 # Secret local stuff
 .env
+
+# Local Netlify folder
+.netlify

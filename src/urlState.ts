@@ -118,6 +118,15 @@ export function getServiceUrlFromUrl(): string | null {
 }
 
 /**
+ * Get layer ID from URL parameter (WFS typeName, e.g. "extern_Mobiliteit:MOB_BUSHALTES")
+ * Used to auto-select a specific layer from the service
+ */
+export function getLayerIdFromUrl(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("layerId");
+}
+
+/**
  * Theme configuration for customizing the UI
  */
 export interface Theme {

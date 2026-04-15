@@ -28,7 +28,7 @@ The map viewer can be controlled via URL search parameters. This allows you to c
 
 ### Example: Loading a Service, setting name, logo, favicon and color
 
-\`http://localhost:3030/?service=https://services.nijmegen.nl/geoservices/extern_Cultuurhistorie/ows?request=getCapabilities&service=WMS&name=Nijmegen&logo=https://en.intonijmegen.com/build/assets/logo.986ea2a747c1189bb935.svg&favicon=https://en.intonijmegen.com/build/assets/favicon.31fd6d719b8b50a9b1b4.ico&color=%231a5a96\`
+- \`http://localhost:3030/?service=https://services.nijmegen.nl/geoservices/extern_Cultuurhistorie/ows?request=getCapabilities&service=WMS&name=Nijmegen&logo=https://en.intonijmegen.com/build/assets/logo.986ea2a747c1189bb935.svg&favicon=https://en.intonijmegen.com/build/assets/favicon.31fd6d719b8b50a9b1b4.ico&color=%231a5a96\`
 
 ### Encoding layers
 

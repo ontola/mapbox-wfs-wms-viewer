@@ -18,7 +18,7 @@ import "./components/DemoUrls.css";
 import { detectServiceType } from "./layers/detectService";
 import { useAllServices } from "./layers/useGEOServices";
 import { Legend } from "./components/Legend";
-import { getServiceUrlFromUrl } from "./urlState";
+import { getServiceUrlFromUrl, getLayerIdFromUrl } from "./urlState";
 import { DemoUrls } from "./components/DemoUrls";
 
 export const bagLayerId = "points";
@@ -146,11 +146,19 @@ export function LayerSelector() {
           }
         });
 
-        // Auto-select first layer if none are visible
+        // Auto-select: prefer layerId from URL, then fall back to first layer
         if (!autoSelectedRef.current) {
           const hasVisible = updatedLayers.some((l) => l.visible);
           if (!hasVisible && updatedLayers.length > 0) {
-            updatedLayers[0] = { ...updatedLayers[0], visible: true };
+            const targetLayerId = getLayerIdFromUrl();
+            let targetIndex = 0;
+            if (targetLayerId) {
+              const found = updatedLayers.findIndex(
+                (l) => l.id === targetLayerId || l.id.endsWith(":" + targetLayerId),
+              );
+              if (found !== -1) targetIndex = found;
+            }
+            updatedLayers[targetIndex] = { ...updatedLayers[targetIndex], visible: true };
             hasChanges = true;
             autoSelectedRef.current = true;
           }
