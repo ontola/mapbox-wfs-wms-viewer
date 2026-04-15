@@ -35,12 +35,15 @@ export function LayerSource({ layer, bounds = boundsNL, onLoadingChange }: Layer
   useEffect(() => {
     if (layer.type === "raster") return;
 
+    const isWfsRequest = layerUrl?.includes("request=GetFeature") || layerUrl?.includes("REQUEST=GetFeature") || layerUrl?.includes("service=WFS") || layerUrl?.includes("SERVICE=WFS");
     const isJsonLayer =
-      layer.uniqueId?.startsWith("json-") ||
-      layerUrl?.includes("outputFormat=application/json") ||
-      layerUrl?.endsWith(".json") ||
-      layerUrl?.endsWith(".geojson") ||
-      layerUrl?.includes("f=geojson");
+      !isWfsRequest && (
+        layer.uniqueId?.startsWith("json-") ||
+        layerUrl?.includes("outputFormat=application/json") ||
+        layerUrl?.endsWith(".json") ||
+        layerUrl?.endsWith(".geojson") ||
+        layerUrl?.includes("f=geojson")
+      );
 
     const isCsvLayer =
       layer.uniqueId?.startsWith("csv-") ||
@@ -53,21 +56,51 @@ export function LayerSource({ layer, bounds = boundsNL, onLoadingChange }: Layer
       wfsUrl = makeWfsUrl(layer, boundsRef.current);
     }
 
+    const isArcGIS = wfsUrl.includes("/query?") && wfsUrl.includes("f=geojson");
+
     console.log(`📡 Fetching data for ${layer.name} from ${wfsUrl}`);
 
     let cancelled = false;
     notifyLoading(true);
-    fetch(wfsUrl)
-      .then(async (response) => {
-        if (isCsvLayer) {
-          const text = await response.text();
-          return parseCsvToGeoJson(text);
-        } else {
-          return response.json();
+
+    const fetchAllData = async (): Promise<any> => {
+      if (isCsvLayer) {
+        const response = await fetch(wfsUrl);
+        const text = await response.text();
+        return parseCsvToGeoJson(text);
+      }
+
+      if (isArcGIS) {
+        const allFeatures: any[] = [];
+        let offset = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          if (cancelled) return null;
+          const pagedUrl = `${wfsUrl}&resultOffset=${offset}`;
+          const response = await fetch(pagedUrl);
+          const data = await response.json();
+          const features = data.features || [];
+          allFeatures.push(...features);
+          const exceeded = data.exceededTransferLimit === true || data.properties?.exceededTransferLimit === true;
+          hasMore = exceeded && features.length > 0;
+          offset += features.length;
+          if (hasMore) {
+            console.log(`📡 Fetched ${allFeatures.length} features so far for ${layer.name}...`);
+          }
         }
-      })
+
+        console.log(`✅ Fetched ${allFeatures.length} total features for ${layer.name}`);
+        return { type: "FeatureCollection", features: allFeatures };
+      }
+
+      const response = await fetch(wfsUrl);
+      return response.json();
+    };
+
+    fetchAllData()
       .then((data) => {
-        if (cancelled) return;
+        if (cancelled || !data) return;
         const crsName = data.crs?.properties?.name;
         const isRD =
           crsName?.includes("28992") || crsName?.includes("EPSG::28992");
