@@ -17,10 +17,12 @@ import { LayerI } from "./layers/LayerTypes";
 import { useLayerGroups } from "./layers/useLayerGroups";
 import { services } from "./layers/defaultServices";
 import "./components/CustomCheckbox.css";
+import "./components/DemoUrls.css";
 import { detectServiceType } from "./layers/detectService";
 import { useAllServices } from "./layers/useGEOServices";
 import { Legend } from "./components/Legend";
 import { getServiceUrlFromUrl } from "./urlState";
+import { DemoUrls } from "./components/DemoUrls";
 
 export const bagLayerId = "points";
 
@@ -290,8 +292,9 @@ export function LayerSelector() {
   };
 
   // Function to handle adding a new service
-  const handleAddService = async () => {
-    if (!serviceUrl.trim()) {
+  const handleAddService = async (overrideUrl?: string | React.MouseEvent) => {
+    const urlToUse = typeof overrideUrl === 'string' ? overrideUrl : serviceUrl;
+    if (!urlToUse.trim()) {
       setServiceError("Please enter a valid URL");
       return;
     }
@@ -301,7 +304,7 @@ export function LayerSelector() {
     setServiceSuccess(null);
 
     try {
-      const result = await detectServiceType(serviceUrl);
+      const result = await detectServiceType(urlToUse);
 
       // If we have a service but also an error, it's a warning
       if (result.service && result.error && result.type) {
@@ -342,8 +345,8 @@ export function LayerSelector() {
         setServiceUrl("");
         // Increment the counter to trigger a re-fetch
         setServiceUpdateCounter((prev) => prev + 1);
-          setAutoSelectServiceUrl(result.service.url);
-          autoSelectedRef.current = false;
+        setAutoSelectServiceUrl(result.service.url);
+        autoSelectedRef.current = false;
       } else {
         setServiceError("This service is already added");
       }
@@ -453,6 +456,13 @@ export function LayerSelector() {
         {serviceError && <div className="service-error">{serviceError}</div>}
         {serviceSuccess && (
           <div className="service-success">{serviceSuccess}</div>
+        )}
+        
+        {!getServiceUrlFromUrl() && (
+          <DemoUrls onSelectUrl={(url) => {
+            setServiceUrl(url);
+            handleAddService(url);
+          }} />
         )}
       </div>
 

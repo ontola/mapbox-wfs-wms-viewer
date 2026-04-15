@@ -44,10 +44,9 @@ body {
 
 .Sidebar {
   max-width: 100vw;
-  /* position: fixed; */
   background: white;
   overflow: auto;
-  display: flex;
+  display: none; /* Hidden by default */
   flex-direction: column;
   right: 0;
   left: 0;
@@ -56,6 +55,10 @@ body {
   z-index: 2;
   width: var(--results-width);
   box-shadow: var(--box-shadow);
+}
+
+.Sidebar.filter-panel--open {
+  display: flex; /* Shown when open */
 }
 
 .Sidebar__scroller {

@@ -38,7 +38,11 @@ const App = () => {
   const [lastInteractionOrigin, setLastInteractionOrigin] =
     React.useState<InteractionOrigin>(undefined);
   const [layers, setLayers] = React.useState<LayerI[]>([]);
-  const [showLayerSelector, setShowLayerSelector] = React.useState(false);
+  const [showLayerSelector, setShowLayerSelector] = React.useState(() => {
+    const urlLayers = getLayersFromUrl();
+    const urlService = getServiceUrlFromUrl();
+    return urlLayers.length > 0 || !!urlService;
+  });
   const [theme, setTheme] = React.useState<Theme | undefined>();
 
   // Initialize layers and theme from URL on mount
