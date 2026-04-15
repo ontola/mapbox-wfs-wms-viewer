@@ -6,99 +6,103 @@ import { makeWfsUrl, makeWmsUrl, parseCsvToGeoJson } from "./utils";
 import { bagLayerId } from "./LayerTypes";
 import { boundsNL } from "./constants";
 import { transformGeoJSONFromRD } from "./rdTransform";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface LayerSourceProps {
   layer: LayerI;
   bounds: BoundsMatrix | null;
+  onLoadingChange?: (layerId: string, loading: boolean) => void;
 }
 
-export function LayerSource({ layer, bounds = boundsNL }: LayerSourceProps) {
+export function LayerSource({ layer, bounds = boundsNL, onLoadingChange }: LayerSourceProps) {
   let mapBoxLayers = makeMapBoxLayer(layer);
   const effectiveBounds = bounds || boundsNL;
   const [geojsonData, setGeojsonData] = useState<any>(null);
+  const onLoadingChangeRef = useRef(onLoadingChange);
+  onLoadingChangeRef.current = onLoadingChange;
 
-  // For GeoJSON sources from ArcGIS, fetch and transform from EPSG:28992
+  const notifyLoading = (isLoading: boolean) => {
+    const id = layer.uniqueId || layer.id;
+    onLoadingChangeRef.current?.(id, isLoading);
+  };
+
+  const boundsRef = useRef(effectiveBounds);
+  boundsRef.current = effectiveBounds;
+
+  const layerUrl = layer.url;
+  const layerId = layer.uniqueId || layer.id;
+
   useEffect(() => {
-    if (layer.type !== "raster") {
-      // Check if it's a direct JSON file layer
-      const isJsonLayer =
-        layer.uniqueId?.startsWith("json-") ||
-        layer.url?.includes("outputFormat=application/json") ||
-        layer.url?.endsWith(".json") ||
-        layer.url?.endsWith(".geojson") ||
-        layer.url?.includes("f=geojson");
+    if (layer.type === "raster") return;
 
-      // Check if it's a CSV layer
-      const isCsvLayer =
-        layer.uniqueId?.startsWith("csv-") ||
-        layer.url?.toLowerCase().endsWith(".csv") ||
-        layer.url?.toLowerCase().includes(".csv?");
+    const isJsonLayer =
+      layer.uniqueId?.startsWith("json-") ||
+      layerUrl?.includes("outputFormat=application/json") ||
+      layerUrl?.endsWith(".json") ||
+      layerUrl?.endsWith(".geojson") ||
+      layerUrl?.includes("f=geojson");
 
-      let wfsUrl = layer.url || "";
+    const isCsvLayer =
+      layer.uniqueId?.startsWith("csv-") ||
+      layerUrl?.toLowerCase().endsWith(".csv") ||
+      layerUrl?.toLowerCase().includes(".csv?");
 
-      if (!isJsonLayer && !isCsvLayer) {
-        wfsUrl = makeWfsUrl(layer, effectiveBounds);
-      } else if (
-        !isCsvLayer && 
-        (wfsUrl.includes("request=GetFeature") ||
-        wfsUrl.includes("REQUEST=GetFeature"))
-      ) {
-        // Skip bbox filtering for JSON layers - the bbox would be in EPSG:4326 but the data
-        // might be in EPSG:28992 (like Utrecht data), causing the filter to return empty results.
-        // Mapbox will handle client-side filtering after coordinate transformation.
-        // The bbox is already removed by makeWfsUrl in utils.ts for non-JSON WFS layers.
-      }
-      const isArcGIS = layer.url?.includes("arcgis");
+    let wfsUrl = layerUrl || "";
 
-      console.log(`📡 Fetching data for ${layer.name} from ${wfsUrl}`);
-
-      fetch(wfsUrl)
-        .then(async (response) => {
-          if (isCsvLayer) {
-            const text = await response.text();
-            return parseCsvToGeoJson(text);
-          } else {
-            return response.json();
-          }
-        })
-        .then((data) => {
-          // Check if this is RD data that needs transformation
-          const crsName = data.crs?.properties?.name;
-          const isRD =
-            crsName?.includes("28992") || crsName?.includes("EPSG::28992");
-
-          // Ensure it's a valid GeoJSON FeatureCollection
-          let finalData = data;
-          if (Array.isArray(data)) {
-            console.log(
-              `🔄 Wrapping array in FeatureCollection for ${layer.name}`,
-            );
-            finalData = {
-              type: "FeatureCollection",
-              features: data.filter(
-                (item) =>
-                  item && typeof item === "object" && item.type === "Feature",
-              ),
-            };
-          }
-
-          if (isRD) {
-            console.log(
-              `🔄 Layer ${layer.name} is in EPSG:28992, transforming...`,
-            );
-            const transformed = transformGeoJSONFromRD(finalData);
-            setGeojsonData(transformed);
-          } else {
-            console.log(`✅ Layer ${layer.name} is ready`);
-            setGeojsonData(finalData);
-          }
-        })
-        .catch((error) => {
-          console.error(`❌ Error fetching data for ${layer.name}:`, error);
-        });
+    if (!isJsonLayer && !isCsvLayer) {
+      wfsUrl = makeWfsUrl(layer, boundsRef.current);
     }
-  }, [layer, effectiveBounds]);
+
+    console.log(`📡 Fetching data for ${layer.name} from ${wfsUrl}`);
+
+    let cancelled = false;
+    notifyLoading(true);
+    fetch(wfsUrl)
+      .then(async (response) => {
+        if (isCsvLayer) {
+          const text = await response.text();
+          return parseCsvToGeoJson(text);
+        } else {
+          return response.json();
+        }
+      })
+      .then((data) => {
+        if (cancelled) return;
+        const crsName = data.crs?.properties?.name;
+        const isRD =
+          crsName?.includes("28992") || crsName?.includes("EPSG::28992");
+
+        let finalData = data;
+        if (Array.isArray(data)) {
+          finalData = {
+            type: "FeatureCollection",
+            features: data.filter(
+              (item) =>
+                item && typeof item === "object" && item.type === "Feature",
+            ),
+          };
+        }
+
+        if (isRD) {
+          const transformed = transformGeoJSONFromRD(finalData);
+          setGeojsonData(transformed);
+        } else {
+          setGeojsonData(finalData);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error(`❌ Error fetching data for ${layer.name}:`, error);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          notifyLoading(false);
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [layerId, layerUrl]);
 
   if (layer.type === "raster") {
     return (

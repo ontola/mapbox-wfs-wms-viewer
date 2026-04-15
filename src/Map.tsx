@@ -82,6 +82,17 @@ export function Map() {
   const [area, setArea] = useState<number | null>(null);
   const [lineLength, setLineLength] = useState<number | null>(null);
   const [currentBounds, setCurrentBounds] = useState<LngLatBounds | null>(null);
+  const [loadingLayers, setLoadingLayers] = useState<Set<string>>(new Set());
+
+  const handleLayerLoading = useCallback((layerId: string, loading: boolean) => {
+    setLoadingLayers(prev => {
+      const next = new Set(prev);
+      if (loading) next.add(layerId);
+      else next.delete(layerId);
+      return next;
+    });
+  }, []);
+
   // Add a ref to store the MapboxDraw instance
   const drawRef = useRef<any>(null);
   // Ref to store timeout for debouncing URL updates
@@ -338,6 +349,13 @@ export function Map() {
         </div>
       )}
 
+      {loadingLayers.size > 0 && (
+        <div className="Map__loading">
+          <div className="Map__loading-spinner" />
+          <span>Laden...</span>
+        </div>
+      )}
+
       <MapGL
         trackResize={true}
         id="mainMap"
@@ -383,6 +401,7 @@ export function Map() {
               `${layer.serviceId || "noservice"}-${layer.url || "nourl"}-${layer.id}`
             }
             bounds={currentBounds ? boundsLngLatToMatrix(currentBounds) : null}
+            onLoadingChange={handleLayerLoading}
           />
         ))}
       </MapGL>
