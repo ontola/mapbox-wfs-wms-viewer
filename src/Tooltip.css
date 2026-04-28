@@ -1,20 +1,38 @@
 .tooltip {
-  position: relative;
+  position: absolute;
   display: inline-block;
   background: white;
   max-width: 300px;
-  border-bottom: 1px dotted black;
   padding: 0.5rem;
   pointer-events: none;
   max-height: 300px;
   overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  z-index: 1000;
+}
+
+.tooltip--overflowing::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 40px;
+  background: linear-gradient(to bottom, transparent, white);
+  pointer-events: none;
 }
 
 .tooltip__key {
   font-weight: bold;
+  font-size: 0.75rem;
+  color: #666;
+  text-transform: uppercase;
 }
 .tooltip__val {
   font-weight: normal;
+  margin-bottom: 0.5rem;
+  word-break: break-word;
 }
 
 /* hide on touch devices */
